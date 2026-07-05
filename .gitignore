@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Node
+node_modules/
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# 第三方开源依赖（本地 clone，不入主仓库；换机器按 README 重新 clone）
+third_party/
+
+# Models / 大文件（不入库）
+*.pth
+*.onnx
+*.bin
+*.safetensors
+
+# 数据
+*.db
+*.sqlite3
+admin/backend/data/
