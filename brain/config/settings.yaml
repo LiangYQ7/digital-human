@@ -1,0 +1,4 @@
+llm:
+  provider: qwen-vl
+  model: qwen-vl-max
+  api_key_env: DASHSCOPE_API_KEY
