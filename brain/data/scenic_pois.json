@@ -1,0 +1,89 @@
+{
+  "_comment": "灵山胜境景区 POI 数据。从[灵山胜境 景点结构化数据集.docx]中提取，待人工核对补全。",
+  "pois": [
+    {
+      "id": "p1",
+      "name": "灵山大佛",
+      "tags": ["佛教文化", "历史", "建筑"],
+      "dwell_min": 40,
+      "must_see": true
+    },
+    {
+      "id": "p2",
+      "name": "梵宫",
+      "tags": ["建筑", "佛教文化", "艺术"],
+      "dwell_min": 50,
+      "must_see": true
+    },
+    {
+      "id": "p3",
+      "name": "五印坛城",
+      "tags": ["建筑", "佛教文化", "历史"],
+      "dwell_min": 30,
+      "must_see": false
+    },
+    {
+      "id": "p4",
+      "name": "九龙灌浴",
+      "tags": ["佛教文化", "表演"],
+      "dwell_min": 25,
+      "must_see": true
+    },
+    {
+      "id": "p5",
+      "name": "拈花湾",
+      "tags": ["自然风光", "禅意", "休闲", "夜景"],
+      "dwell_min": 90,
+      "must_see": true
+    },
+    {
+      "id": "p6",
+      "name": "天下第一掌",
+      "tags": ["佛教文化", "建筑"],
+      "dwell_min": 15,
+      "must_see": false
+    },
+    {
+      "id": "p7",
+      "name": "曼飞龙塔",
+      "tags": ["建筑", "佛教文化"],
+      "dwell_min": 20,
+      "must_see": false
+    },
+    {
+      "id": "p8",
+      "name": "灵山博物馆",
+      "tags": ["历史", "文化", "艺术"],
+      "dwell_min": 30,
+      "must_see": false
+    },
+    {
+      "id": "p9",
+      "name": "百子戏弥勒",
+      "tags": ["佛教文化", "雕塑"],
+      "dwell_min": 15,
+      "must_see": false
+    },
+    {
+      "id": "p10",
+      "name": "阿育王柱",
+      "tags": ["历史", "佛教文化", "建筑"],
+      "dwell_min": 15,
+      "must_see": false
+    },
+    {
+      "id": "p11",
+      "name": "灵山花海",
+      "tags": ["自然风光", "休闲", "拍照"],
+      "dwell_min": 30,
+      "must_see": false
+    },
+    {
+      "id": "p12",
+      "name": "禅意小镇",
+      "tags": ["休闲", "禅意", "自然风光"],
+      "dwell_min": 45,
+      "must_see": false
+    }
+  ]
+}

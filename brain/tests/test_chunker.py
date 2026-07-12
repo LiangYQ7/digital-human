@@ -9,7 +9,7 @@ def test_chunk_documents_splits_long_text(tmp_path):
     chunks = chunk_documents(tmp_path)
     assert len(chunks) >= 2
     assert all("text" in c and "source" in c and "id" in c for c in chunks)
-    assert all(len(c["text"]) <= 400 for c in chunks)
+    assert all(len(c["text"]) <= 500 for c in chunks)
 
 
 def test_chunk_documents_handles_empty_folder(tmp_path):

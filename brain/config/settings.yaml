@@ -1,4 +1,4 @@
 llm:
-  provider: qwen-vl
-  model: qwen-vl-max
+  provider: qwen-omni
+  model: qwen3-omni-flash
   api_key_env: DASHSCOPE_API_KEY

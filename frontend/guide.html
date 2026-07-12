@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>灵山导览</title>
+<style>body{font-family:sans-serif;margin:20px;background:#111;color:#fff}
+video{width:100%;max-width:640px;background:#000;border-radius:8px}
+button{padding:14px 28px;font-size:1rem;background:#c9a54b;border:none;color:#000;border-radius:8px;cursor:pointer;margin-top:12px}
+#msg{margin-top:12px;color:#aaa}</style></head><body>
+<h2>灵山数字人导览</h2>
+<video id="v" autoplay playsinline muted></video>
+<div>
+  <button id="btn" onclick="connect()">连接数字人</button>
+  <span id="msg"></span>
+</div>
+<script>
+var pc=null;
+function log(s){document.getElementById('msg').textContent=s;console.log(s)}
+function connect(){
+  if(pc){log('已连接');return;}
+  log('正在连接...');
+  try{
+    pc=new RTCPeerConnection({sdpSemantics:'unified-plan'});
+    pc.addTransceiver('video',{direction:'recvonly'});
+    pc.addTransceiver('audio',{direction:'recvonly'});
+    pc.addEventListener('track',e=>{
+      if(e.track.kind==='video'){document.getElementById('v').srcObject=e.streams[0];log('收到视频流');}
+    });
+    pc.addEventListener('connectionstatechange',()=>log('状态:'+pc.connectionState));
+    pc.createOffer().then(o=>pc.setLocalDescription(o)).then(()=>new Promise(r=>{
+      if(pc.iceGatheringState==='complete')r();
+      else pc.addEventListener('icegatheringstatechange',()=>{if(pc.iceGatheringState==='complete')r();});
+    })).then(()=>{
+      log('发送offer...');
+      return fetch('http://localhost:8010/offer',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({sdp:pc.localDescription.sdp,type:pc.localDescription.type})
+      });
+    }).then(r=>r.json()).then(a=>{
+      if(a.sdp){
+        log('收到answer');
+        return pc.setRemoteDescription(new RTCSessionDescription({type:'answer',sdp:a.sdp}));
+      }else{
+        throw new Error((a.msg||a.code||'未知错误'));
+      }
+    }).then(()=>log('已连接!')).catch(e=>{log('失败:'+e.message);if(pc){pc.close();pc=null;}});
+  }catch(e){log('错误:'+e.message);}
+}
+window.addEventListener('beforeunload',()=>{if(pc){pc.close();pc=null;}});
+</script></body></html>

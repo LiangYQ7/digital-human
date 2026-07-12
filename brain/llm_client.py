@@ -1,6 +1,13 @@
 import os
-import yaml
 from pathlib import Path
+
+import yaml
+from dotenv import load_dotenv
+
+# 自动加载项目根目录的 .env 文件（作为环境变量兜底）
+_env_path = Path(__file__).parent.parent / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path, override=True)  # override=True: .env 文件中的值优先于系统环境变量
 
 _CONFIG = None
 _SYSTEM_PROMPT = None

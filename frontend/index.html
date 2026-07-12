@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>灵山胜境 — 智慧导览</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Noto Sans SC','Microsoft YaHei',sans-serif;background:#0a0a0a;color:#ddd;overflow-x:hidden}
+
+/* ── Scroll sections ── */
+.scroll-section{position:relative;width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.scroll-section .bg{position:absolute;inset:0;background-size:cover;background-position:center;background-attachment:fixed;transform:scale(1.05);transition:transform 8s cubic-bezier(.25,.46,.45,.94)}
+.scroll-section .overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,10,.35) 0%,rgba(10,10,10,.25) 50%,rgba(10,10,10,.45) 100%)}
+.scroll-section .content{position:relative;z-index:2;max-width:800px;padding:60px 40px;text-align:center;opacity:0;transform:translateY(60px);transition:all 1.2s cubic-bezier(.22,1,.36,1)}
+.scroll-section .content.revealed{opacity:1;transform:translateY(0)}
+.scroll-section .content .tag{font-size:.8rem;letter-spacing:.35em;text-transform:uppercase;color:#c9a54b;margin-bottom:16px;font-weight:400}
+.scroll-section .content h2{font-family:'Noto Serif SC',serif;font-size:clamp(2rem,5vw,3.6rem);font-weight:600;color:#f5f0e8;line-height:1.3;margin-bottom:20px}
+.scroll-section .content h2 em{font-style:normal;color:#c9a54b}
+.scroll-section .content p{font-size:clamp(.95rem,1.8vw,1.15rem);line-height:2;color:rgba(245,240,232,.8);font-weight:300;max-width:660px;margin:0 auto}
+.scroll-section .gold-line{width:60px;height:1px;background:linear-gradient(90deg,transparent,#c9a54b,transparent);margin:24px auto}
+
+/* ── Hero ── */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
+.hero .bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.45) saturate(.85);transform:scale(1.08);transition:transform 10s ease}
+.hero.in-view .bg{transform:scale(1)}
+.hero .overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,10,.15) 0%,rgba(10,10,10,.35) 50%,rgba(10,10,10,.6) 100%)}
+.hero .content{position:relative;z-index:2;text-align:center;opacity:0;transform:translateY(40px);transition:all 1.5s cubic-bezier(.22,1,.36,1) .3s}
+.hero.in-view .content{opacity:1;transform:translateY(0)}
+.hero .sub-mark{font-size:.75rem;letter-spacing:.4em;color:#c9a54b;margin-bottom:12px;font-weight:300}
+.hero h1{font-family:'Noto Serif SC',serif;font-size:clamp(2.8rem,10vw,7rem);font-weight:600;color:#f5f0e8;line-height:1.1;margin-bottom:8px;text-shadow:0 2px 40px rgba(0,0,0,.5)}
+.hero h1 .smaller{display:block;font-size:clamp(1.2rem,3vw,2.2rem);font-weight:400;color:rgba(245,240,232,.7);margin-top:8px}
+.hero .gold-line{width:80px;height:1px;background:linear-gradient(90deg,transparent,#c9a54b,transparent);margin:28px auto}
+.hero p{color:rgba(245,240,232,.65);font-size:.95rem;letter-spacing:.15em;font-weight:300;margin-bottom:40px}
+.hero .scroll-hint{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);z-index:2;display:flex;flex-direction:column;align-items:center;gap:8px;color:rgba(245,240,232,.4);font-size:.7rem;letter-spacing:.15em;animation:float 2.5s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(8px)}}
+.hero .scroll-hint .arrow{width:1px;height:32px;background:linear-gradient(180deg,transparent,#c9a54b)}
+
+/* ── Floating entry seal ── */
+.entry-seal{position:fixed;bottom:40px;right:40px;z-index:100;cursor:pointer;width:72px;height:72px;border-radius:50%;border:1.5px solid rgba(201,165,75,.5);background:rgba(10,10,10,.7);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;transition:all .4s cubic-bezier(.22,1,.36,1);box-shadow:0 4px 24px rgba(0,0,0,.4)}
+.entry-seal:hover{border-color:#c9a54b;background:rgba(201,165,75,.15);transform:scale(1.05);box-shadow:0 4px 32px rgba(201,165,75,.15)}
+.entry-seal .char{font-family:'Noto Serif SC',serif;font-size:1.6rem;color:#c9a54b;line-height:1;transition:transform .4s ease}
+.entry-seal:hover .char{transform:rotate(90deg)}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;opacity:0;transition:opacity .4s ease}
+.modal-overlay.show{display:flex;opacity:1}
+.modal{background:linear-gradient(180deg,#1a1a1a 0%,#121212 100%);border:1px solid rgba(201,165,75,.2);border-radius:16px;padding:0;width:420px;max-width:92vw;box-shadow:0 24px 80px rgba(0,0,0,.6);transform:scale(.92) translateY(20px);transition:transform .4s cubic-bezier(.22,1,.36,1);overflow:hidden}
+.modal-overlay.show .modal{transform:scale(1) translateY(0)}
+.modal-header{padding:32px 32px 0;text-align:center}
+.modal-header .icon{font-size:2rem;color:#c9a54b;margin-bottom:8px}
+.modal-header h2{font-family:'Noto Serif SC',serif;font-size:1.3rem;color:#f5f0e8;font-weight:600}
+.modal-header p{color:rgba(245,240,232,.5);font-size:.82rem;margin-top:6px}
+.modal-tabs{display:flex;margin:24px 32px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.modal-tabs button{flex:1;padding:12px 0;border:none;background:none;color:rgba(245,240,232,.4);font-size:.85rem;cursor:pointer;font-family:inherit;transition:color .3s;position:relative}
+.modal-tabs button::after{content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:1.5px;background:#c9a54b;transform:scaleX(0);transition:transform .3s ease}
+.modal-tabs button.active{color:#c9a54b}
+.modal-tabs button.active::after{transform:scaleX(1)}
+.modal-body{padding:24px 32px 32px}
+.form-group{margin-bottom:20px}
+.form-group:last-child{margin-bottom:12px}
+.form-group label{display:block;font-size:.78rem;color:rgba(245,240,232,.5);margin-bottom:6px;letter-spacing:.1em}
+.form-group input{width:100%;padding:12px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#f5f0e8;font-size:.9rem;font-family:inherit;outline:none;transition:border-color .3s}
+.form-group input:focus{border-color:#c9a54b}
+.form-group input::placeholder{color:rgba(245,240,232,.2)}
+.modal-submit{width:100%;padding:14px;border:none;border-radius:8px;background:linear-gradient(135deg,#c9a54b,#b8923e);color:#0a0a0a;font-size:.95rem;font-weight:500;cursor:pointer;font-family:inherit;transition:all .3s;margin-top:4px}
+.modal-submit:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(201,165,75,.25)}
+.modal-submit:active{transform:translateY(0)}
+.modal-footer{text-align:center;padding:0 32px 24px}
+.modal-footer a{color:rgba(201,165,75,.6);font-size:.78rem;cursor:pointer;text-decoration:none;transition:color .3s}
+.modal-footer a:hover{color:#c9a54b}
+.form-group .switch-link{text-align:right;margin-top:4px}
+.form-group .switch-link a{color:rgba(201,165,75,.5);font-size:.75rem;cursor:pointer;text-decoration:none}
+
+/* ── Footer ── */
+footer{text-align:center;padding:32px 20px;background:#0a0a0a;border-top:1px solid rgba(201,165,75,.08)}
+footer p{font-size:.75rem;color:rgba(245,240,232,.25);letter-spacing:.1em}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .entry-seal{width:60px;height:60px;bottom:24px;right:24px}
+  .entry-seal .char{font-size:1.3rem}
+  .modal{width:360px}
+  .modal-header,.modal-body,.modal-footer{padding-left:24px;padding-right:24px}
+  .modal-tabs{margin-left:24px;margin-right:24px}
+  .scroll-section .content{padding:40px 24px}
+  .scroll-section .bg{background-attachment:scroll}
+}
+
+</style>
+</head>
+<body>
+<!-- ======== HERO ======== -->
+<section class="hero" id="hero">
+  <div class="bg" style="background-image:url('/scenic_1.webp')"></div>
+  <div class="overlay"></div>
+  <div class="content">
+    <div class="sub-mark">LINGSHAN · SACRED LAND</div>
+    <h1>灵山胜境<small class="smaller">智慧导览 · 数字人同行</small></h1>
+    <div class="gold-line"></div>
+    <p>太湖之滨 · 佛光普照</p>
+    <div class="scroll-hint"><span>向下探索</span><div class="arrow"></div></div>
+  </div>
+</section>
+
+<!-- ======== SECTION 2 ======== -->
+<section class="scroll-section" id="sec2">
+  <div class="bg" style="background-image:url('/scenic_2.webp')"></div>
+  <div class="overlay"></div>
+  <div class="content">
+    <div class="tag">HISTORY &amp; CULTURE</div>
+    <h2>千年梵音 · <em>一脉相承</em></h2>
+    <div class="gold-line"></div>
+    <p>灵山胜境坐落于无锡太湖之滨，是国家5A级旅游景区。这里山环水抱，钟灵毓秀，以灵山大佛为核心，融合佛教文化、自然风光与现代科技，成为世界佛教论坛永久会址，每年吸引数百万海内外游客朝圣观光。</p>
+  </div>
+</section>
+
+<!-- ======== SECTION 3 ======== -->
+<section class="scroll-section" id="sec3">
+  <div class="bg" style="background-image:url('/scenic_3.webp')"></div>
+  <div class="overlay"></div>
+  <div class="content">
+    <div class="tag">ICONIC LANDMARKS</div>
+    <h2>灵山大佛 · <em>佛光万丈</em></h2>
+    <div class="gold-line"></div>
+    <p>灵山大佛高88米，通体青铜铸就，巍然矗立于群山之间。左手指天施无畏印，右手指地施与愿印，慈悲庄严。与之辉映的灵山梵宫以7.2万平方米的宏伟建筑群被誉为"佛教艺术的卢浮宫"，九龙灌浴、五印坛城等景点各具神韵。</p>
+  </div>
+</section>
+
+<!-- ======== SECTION 4 ======== -->
+<section class="scroll-section" id="sec4">
+  <div class="bg" style="background-image:url('/scenic_4.webp')"></div>
+  <div class="overlay"></div>
+  <div class="content">
+    <div class="tag">CHAN · LIVING</div>
+    <h2>拈花湾 · <em>禅意生活</em></h2>
+    <div class="gold-line"></div>
+    <p>拈花湾禅意小镇以"禅"文化为主题，将东方美学融入每一处细节。梵天花海、香月花街、微笑广场……漫步其中，可体验抄经、品茗、花道等禅意活动。这里不仅是景区，更是一处让心灵安住的归处。</p>
+  </div>
+</section>
+
+<!-- ======== SECTION 5 ======== -->
+<section class="scroll-section" id="sec5">
+  <div class="bg" style="background-image:url('/scenic_5.webp')"></div>
+  <div class="overlay"></div>
+  <div class="content">
+    <div class="tag">WELCOME</div>
+    <h2>灵山胜境 · <em>静候君临</em></h2>
+    <div class="gold-line"></div>
+    <p>AI 智能导游数字人，为您提供景点讲解、路线规划、消费预算等全方位服务。无论您是想深入了解佛教文化，还是寻找一条最合适的游览路线，数字人都能为您一一解答。</p>
+  </div>
+</section>
+
+<!-- ======== FLOATING ENTRY SEAL ======== -->
+<div class="entry-seal" id="entrySeal" onclick="openModal()" title="进入灵山">
+  <span class="char">入</span>
+</div>
+
+<!-- ======== LOGIN MODAL ======== -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="icon">🏯</div>
+      <h2>灵山胜境</h2>
+      <p>智慧导览 · 数字人同行</p>
+    </div>
+    <div class="modal-tabs">
+      <button class="active" onclick="switchTab('user',this)">游客</button>
+      <button onclick="switchTab('admin',this)">管理员</button>
+    </div>
+    <div id="userForm" class="modal-body">
+      <div class="form-group">
+        <label>用户名</label>
+        <input type="text" id="userName" placeholder="请输入用户名" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="userPass" placeholder="选填，游客无需密码" autocomplete="current-password">
+      </div>
+      <button class="modal-submit" onclick="loginUser()">进入灵山胜境</button>
+    </div>
+    <div id="adminForm" class="modal-body" style="display:none">
+      <div class="form-group">
+        <label>管理员账号</label>
+        <input type="text" id="adminUser" placeholder="请输入管理员账号" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="adminPass" placeholder="请输入密码" autocomplete="current-password">
+      </div>
+      <button class="modal-submit" onclick="loginAdmin()">登录管理后台</button>
+      <div class="form-group switch-link">
+        <a onclick="toggleRegister()">还没有账号？立即注册</a>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <a onclick="closeModal()">取消</a>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>灵山胜境 · 智慧导览系统 © 2026</p>
+</footer>
+
+<script>
+// ── Hero parallax ──
+setTimeout(()=>document.getElementById('hero').classList.add('in-view'),100);
+
+// ── Scroll reveal ──
+const revealEls = document.querySelectorAll('.scroll-section .content');
+const obs = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('revealed')})
+},{threshold:.15,rootMargin:'0px 0px -40px 0px'});
+revealEls.forEach(el=>obs.observe(el));
+// 首屏（hero）立刻显示
+setTimeout(()=>{if(revealEls[0])revealEls[0].classList.add('revealed')},200);
+
+// ── Modal ──
+function openModal(){document.getElementById('modalOverlay').classList.add('show');document.body.style.overflow='hidden'}
+function closeModal(e){if(e&&e.target!==document.getElementById('modalOverlay')&&e.target.closest('.modal-footer a')){}document.getElementById('modalOverlay').classList.remove('show');document.body.style.overflow=''}
+function switchTab(tab,btn){
+  document.querySelectorAll('.modal-tabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('userForm').style.display=tab==='user'?'block':'none';
+  document.getElementById('adminForm').style.display=tab==='admin'?'block':'none';
+}
+
+// ── Login ──
+function loginUser(){
+  const name=document.getElementById('userName').value.trim()||'游客';
+  localStorage.setItem('ls_user',name);
+  window.location.href='/tourist';
+}
+function loginAdmin(){
+  const user=document.getElementById('adminUser').value.trim();
+  const pass=document.getElementById('adminPass').value;
+  if(!user||!pass)return alert('请输入管理员账号和密码');
+  if(user==='admin'&&pass==='admin123'){
+    window.location.href='/admin';
+  }else{
+    alert('账号或密码错误\n提示：默认管理员 admin / admin123');
+  }
+}
+function toggleRegister(){
+  alert('请联系景区管理员注册管理员账号。\n或使用默认账号：admin / admin123');
+}
+
+// ── Keyboard ──
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+
+// ── Overlay click close ──
+document.getElementById('modalOverlay').addEventListener('click',closeModal);
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+/* 形象管理 — 两栏布局 */
+.avatar-row{display:flex;gap:16px;min-height:600px}
+.avatar-left{flex:1;min-width:0}
+.avatar-right{width:420px;flex-shrink:0}
+.avatar-video-box,.avatar-left .card{max-width:500px}
+.avatar-video-box{background:#000;border-radius:10px;overflow:hidden;margin-bottom:12px;aspect-ratio:1/1}
+.avatar-video-box video{width:100%;height:100%;object-fit:cover;background:#000;display:block}
+.avatar-video-box .ctrl{background:#1a1a1a;padding:8px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+.avatar-video-box .ctrl button,.avatar-video-box .ctrl input{font-size:12px}
+.avatar-video-box .ctrl button{padding:4px 12px;border:1px solid #555;background:0 0;color:#ccc;border-radius:4px;cursor:pointer}
+.avatar-video-box .ctrl button:hover{border-color:#2d5a3f;color:#fff}
+.avatar-video-box .ctrl input{background:#333;color:#fff;border:1px solid #555;border-radius:4px;padding:4px 8px;width:auto}
+.status-badge{font-size:11px;padding:2px 8px;border-radius:10px}
+.status-badge.on{background:#1b5e20;color:#a5d6a7}
+.status-badge.off{background:#b71c1c;color:#ef9a9a}
+@media(max-width:900px){.avatar-row{flex-direction:column}.avatar-right{width:100%}.avatar-video-box video{height:300px}}
