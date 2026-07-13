@@ -1,0 +1,39 @@
+# ============================================================
+# 数字人渲染层依赖（LiveTalking）— 按需安装
+# ============================================================
+# 这些是 LiveTalking 数字人渲染所需的包，体积大（含 PyTorch）。
+# 如果小明只需要改后台代码，可以不装这些。
+# 安装方式：
+#   pip install -r requirements-ml.txt
+#
+# PyTorch 建议单独安装（根据是否有 GPU 选不同命令）：
+#   CPU 版： pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#   GPU 版： pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+# ============================================================
+
+# ---------- 深度学习框架 ----------
+# PyTorch（建议单独安装，见上方说明）
+torch>=2.0
+torchvision>=0.15
+
+# ---------- 模型与推理 ----------
+transformers>=4.46          # HuggingFace 模型
+diffusers>=0.30             # 扩散模型（MuseTalk）
+accelerate>=1.0             # 分布式加速
+einops>=0.8                 # 张量操作
+
+# ---------- 音频处理 ----------
+soundfile>=0.12             # 音频读写
+librosa>=0.10               # 音频分析
+resampy>=0.4                # 重采样
+edge-tts>=6.0               # 微软 TTS（云端）
+
+# ---------- 图像/视频 ----------
+opencv-python-headless>=4.9 # 图像处理
+scipy>=1.11                 # 科学计算
+
+# ---------- 网络 ----------
+flask>=3.0                  # LiveTalking 的服务端
+aiohttp-cors>=0.7           # WebRTC 信令
+aiortc>=1.9                 # WebRTC 实时通信
+websockets>=12.0            # WebSocket
