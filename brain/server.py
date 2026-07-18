@@ -117,11 +117,19 @@ async def proxy_lt(request: Request, path: str):
             return Response(content=r.content, status_code=r.status_code, headers=dict(r.headers))
         except Exception as e:
             print(f"[PROXY] ERROR {request.method} {url}: {e}", flush=True)
-            return Response(content=str(e), status_code=502)
+            import json
+            return Response(
+                content=json.dumps({"sdp": "", "msg": f"数字人服务未启动: {e}"}),
+                status_code=502,
+                media_type="application/json"
+            )
 
 
 # ── 管理后台路由 ──
 sys.path.insert(0, str(Path(__file__).parent.parent / "admin" / "backend"))
+from app.database import Base, engine  # noqa: E402
+from app.models import ChatLog, KnowledgeDoc, AvatarConfig  # noqa: E402 先加载模型
+Base.metadata.create_all(bind=engine)
 from app.routers import avatar as admin_avatar, dashboard, knowledge, report  # noqa: E402
 app.include_router(admin_avatar.router)
 app.include_router(dashboard.router)
