@@ -187,37 +187,82 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 
 <section class="page" id="page-pois">
   <h2 class="page-title">📍 景点导览</h2>
-  <p class="page-sub">点击任意景点，可让数字人为你详细讲解</p>
+  <p class="page-sub">点击任意景点，查看详细介绍并咨询 AI</p>
   <div class="section-label"><span class="bar"></span>必看景点</div>
   <div class="cards" id="poiMust"></div>
   <div class="section-label"><span class="bar"></span>更多景点</div>
   <div class="cards" id="poiOther"></div>
 </section>
 
+<section class="page" id="page-poi-detail">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+    <button onclick="switchPage('pois',document.querySelector('nav a[data-page=pois]'))" style="background:none;border:none;font-size:1.3rem;cursor:pointer">←</button>
+    <h2 class="page-title" id="poi-detail-title" style="margin:0">景点详情</h2>
+  </div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <div style="flex:1;min-width:280px">
+      <div class="card" style="text-align:center;padding:30px">
+        <div style="font-size:5rem;margin-bottom:12px" id="poi-detail-emoji">🏯</div>
+        <h3 id="poi-detail-name" style="font-size:1.4rem;margin-bottom:6px"></h3>
+        <div id="poi-detail-tags" style="margin-bottom:12px"></div>
+        <p id="poi-detail-desc" style="color:#666;line-height:1.8;font-size:.92rem;margin-bottom:16px"></p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <div class="stat"><div class="num" id="poi-detail-dwell"></div><div class="label">建议游览</div></div>
+          <div class="stat"><div class="num" id="poi-detail-rank">#1</div><div class="label">推荐指数</div></div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:300px">
+      <div class="card" style="height:100%;display:flex;flex-direction:column">
+        <h3>🤖 AI 智能讲解</h3>
+        <p style="color:#888;font-size:.82rem;margin-bottom:12px">向 AI 导游提问，了解更多细节</p>
+        <div class="chat-msgs" id="poi-chat-msgs" style="flex:1;min-height:200px;max-height:350px;overflow-y:auto;padding:8px;background:#faf8f3;border-radius:8px;margin-bottom:10px">
+          <div class="msg ai" id="poi-chat-welcome">点击下方按钮，让我为你详细介绍这个景点～</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="chip" onclick="poiQuickAsk('请详细介绍这个景点')" style="font-size:.8rem;padding:6px 12px;border-radius:14px;border:1px solid #e0d6bf;background:#fff;color:#6d5b3a;cursor:pointer">📖 详细介绍</button>
+          <button class="chip" onclick="poiQuickAsk('这里有什么历史典故吗')" style="font-size:.8rem;padding:6px 12px;border-radius:14px;border:1px solid #e0d6bf;background:#fff;color:#6d5b3a;cursor:pointer">📜 历史典故</button>
+          <button class="chip" onclick="poiQuickAsk('游览这个景点有什么注意事项')" style="font-size:.8rem;padding:6px 12px;border-radius:14px;border:1px solid #e0d6bf;background:#fff;color:#6d5b3a;cursor:pointer">💡 游览贴士</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="page" id="page-route">
   <h2 class="page-title">🗺 智能游览路线</h2>
-  <p class="page-sub">根据你的可用时间，自动推荐最佳游览顺序</p>
+  <p class="page-sub">根据你的时间和偏好，AI 为你规划最佳路线</p>
   <div class="route-bar">
-    <span class="lbl">我大约有：</span>
+    <span class="lbl">⏰ 出发时间：</span>
+    <select id="route-start" onchange="genRoute(getActiveHours(),null)" style="padding:7px 14px;border:1px solid #ddd;border-radius:18px;font-size:.85rem;margin-right:16px">
+      <option value="8">08:00 清晨出发</option><option value="9" selected>09:00 上午出发</option><option value="10">10:00 上午出发</option>
+      <option value="12">12:00 中午出发</option><option value="14">14:00 下午出发</option><option value="16">16:00 傍晚出发</option>
+    </select>
+    <span class="lbl">🎯 兴趣偏好：</span>
+    <select id="route-interest" onchange="genRoute(getActiveHours(),null)" style="padding:7px 14px;border:1px solid #ddd;border-radius:18px;font-size:.85rem">
+      <option value="综合">综合推荐</option><option value="佛教文化">佛教文化</option><option value="自然风光">自然风光</option><option value="建筑艺术">建筑艺术</option><option value="休闲禅意">休闲禅意</option>
+    </select>
+  </div>
+  <div class="route-bar">
+    <span class="lbl">我有大约：</span>
     <button class="time-btn" onclick="genRoute(2,this)">半天（2小时）</button>
     <button class="time-btn active" onclick="genRoute(4,this)">半天（4小时）</button>
     <button class="time-btn" onclick="genRoute(6,this)">一天（6小时）</button>
     <button class="time-btn" onclick="genRoute(8,this)">深度（8小时）</button>
   </div>
   <div class="tl-summary" id="routeSummary"></div>
+  <div class="card" style="margin-bottom:16px">
+    <h3>🗺 路线地图</h3>
+    <div id="routeMap" style="height:300px;background:#e8f0e4;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#888;font-size:.9rem">
+      路线规划中...
+    </div>
+  </div>
   <div class="timeline" id="routeTimeline"></div>
 </section>
 
 <section class="page" id="page-about">
   <div class="hero" style="padding:40px 20px"><h1>关于灵山胜境</h1><p>太湖之滨 · 佛光普照 · 禅意生活</p></div>
-  <div class="cards">
-    <div class="card"><h3>🏯 灵山大佛</h3><p>通高88米，青铜铸造，世界最高铜佛像之一。右手施无畏印，左手施与愿印，俯瞰太湖。</p></div>
-    <div class="card"><h3>🏛 灵山梵宫</h3><p>建筑面积7.2万平方米，造价18亿。金碧辉煌的佛教艺术殿堂，融合传统工艺与现代建筑。</p></div>
-    <div class="card"><h3>🌸 拈花湾</h3><p>禅意小镇，唐风宋韵。梵天花海3万平方米，四季花海。夜游灯光秀，禅修体验。</p></div>
-    <div class="card"><h3>⛲ 九龙灌浴</h3><p>再现佛陀诞生场景，九龙喷水沐浴太子佛。动态音乐喷泉表演，每天定时上演。</p></div>
-    <div class="card"><h3>🖐 天下第一掌</h3><p>高11.7米，宽5.5米，灵山大佛右手1:1复制品。摸掌祈福，沾福气保平安。</p></div>
-    <div class="card"><h3>🏯 五印坛城</h3><p>藏传佛教风格建筑，展示藏传佛教艺术。坛城金顶、转经筒、唐卡壁画。</p></div>
-  </div>
+  <div class="cards" id="aboutCards"></div>
 </section>
 
 <button id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="返回顶部">↑</button>
@@ -285,7 +330,7 @@ function removeTyping() { if (typingEl) { typingEl.remove(); typingEl = null; } 
 function sendText() {
   var t = document.getElementById('chatInput').value.trim();
   if (!t) return;
-  if (!sessionid) { alert('请先点「连接数字人」'); return; }
+  if (!sessionid) { sessionid = 'web_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
   addMsg('user', t);
   document.getElementById('chatInput').value = '';
   addTyping();
@@ -357,6 +402,40 @@ function renderPois() {
   document.getElementById('poiMust').innerHTML = POIS.filter(function(p) { return p.must; }).map(card).join('');
   document.getElementById('poiOther').innerHTML = POIS.filter(function(p) { return !p.must; }).map(card).join('');
 }
+// ======== POI DETAIL ========
+var _curPoi = null;
+function showPoiDetail(name) {
+  var p = POIS.find(function(x) { return x.name === name; });
+  if (!p) return;
+  _curPoi = p;
+  document.getElementById('poi-detail-title').textContent = p.name;
+  document.getElementById('poi-detail-emoji').textContent = p.emoji;
+  document.getElementById('poi-detail-name').textContent = p.name;
+  document.getElementById('poi-detail-desc').textContent = p.desc;
+  document.getElementById('poi-detail-dwell').textContent = '约' + p.dwell + '分钟';
+  document.getElementById('poi-detail-tags').innerHTML = p.tags.map(function(t) { return '<span class="t">' + t + '</span>'; }).join('');
+  document.getElementById('poi-detail-rank').textContent = p.must ? '#必看' : '#推荐';
+  document.getElementById('poi-chat-msgs').innerHTML = '<div class="msg ai">👋 你好！我是灵山数字导游。关于「' + p.name + '」，有什么想了解的吗？</div>';
+  switchPage('poi-detail', null);
+}
+function poiQuickAsk(question) {
+  if (!_curPoi) return;
+  if (!sessionid) { sessionid = 'web_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
+  var fullQ = question + '：' + _curPoi.name;
+  var msgs = document.getElementById('poi-chat-msgs');
+  msgs.innerHTML += '<div class="msg user">' + question + '</div>';
+  msgs.innerHTML += '<div class="typing">思考中...</div>';
+  msgs.scrollTop = msgs.scrollHeight;
+  fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: fullQ, sessionid: sessionid }) })
+    .then(function(r) { return r.json(); }).then(function(d) {
+      msgs.querySelector('.typing') && msgs.querySelector('.typing').remove();
+      msgs.innerHTML += '<div class="msg ai">' + d.reply + '</div>';
+      msgs.scrollTop = msgs.scrollHeight;
+    }).catch(function() {
+      msgs.querySelector('.typing') && msgs.querySelector('.typing').remove();
+      msgs.innerHTML += '<div class="msg ai">抱歉，出了点问题...</div>';
+    });
+}
 function askAbout(name) { switchPage('guide', document.querySelector('nav a[data-page="guide"]')); document.getElementById('chatInput').value = '请介绍一下' + name; document.getElementById('chatInput').focus(); }
 
 // ======== QUICK ========
@@ -368,33 +447,105 @@ var QUICK = [
 document.getElementById('quickGrid').innerHTML = QUICK.map(function(q) { return '<div class="quick-card" onclick="quickAsk(\'' + q.q + '\')"><div class="qq">' + q.icon + ' 常见问题</div><div class="qa">' + q.q + '</div></div>'; }).join('');
 
 // ======== ROUTE ========
+function getActiveHours() {
+  var active = document.querySelector('.time-btn.active');
+  return active ? parseInt(active.textContent.match(/\d+/)[0]) : 4;
+}
 function genRoute(hours, btn) {
   document.querySelectorAll('.time-btn').forEach(function(b) { b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
+  else { var btns = document.querySelectorAll('.time-btn'); for (var i=0;i<btns.length;i++) { if (parseInt(btns[i].textContent.match(/\d+/)[0])===hours) btns[i].classList.add('active'); } }
+  var interest = document.getElementById('route-interest').value;
+  var startHour = parseInt(document.getElementById('route-start').value);
   var total = hours * 60, move = 8, sel = [], used = 0;
-  POIS.filter(function(p) { return p.must; }).sort(function(a, b) { return a.dwell - b.dwell; }).forEach(function(p) {
+
+  // 兴趣筛选：优先匹配兴趣标签的景点
+  var candidates = POIS.slice();
+  if (interest !== '综合') {
+    candidates.sort(function(a,b) {
+      var aMatch = a.tags.some(function(t){return t===interest||interest.indexOf(t)>=0;})?0:1;
+      var bMatch = b.tags.some(function(t){return t===interest||interest.indexOf(t)>=0;})?0:1;
+      return aMatch - bMatch;
+    });
+  }
+
+  // 先选必看，再选其他
+  var mustSeen = candidates.filter(function(p){return p.must;});
+  var other = candidates.filter(function(p){return !p.must;});
+  mustSeen.concat(other).forEach(function(p) {
     var cost = p.dwell + (sel.length ? move : 0);
     if (used + cost <= total) { sel.push(p); used += cost; }
   });
-  POIS.filter(function(p) { return !p.must; }).sort(function(a, b) { return a.dwell - b.dwell; }).forEach(function(p) {
-    var cost = p.dwell + move;
-    if (used + cost <= total) { sel.push(p); used += cost; }
-  });
-  document.getElementById('routeSummary').innerHTML = '<div class="item">⏱ 预计总时长 <b>' + Math.round(used / 6) / 10 + 'h</b> / ' + hours + 'h</div><div class="item">📍 景点 <b>' + sel.length + '</b></div><div class="item">✅ 必看 <b>' + sel.filter(function(p) { return p.must; }).length + '/' + POIS.filter(function(p) { return p.must; }).length + '</b></div>';
-  if (!sel.length) { document.getElementById('routeTimeline').innerHTML = '<div class="empty-tip">时间太短，至少2小时～</div>'; return; }
-  var acc = 0, base = 540;
-  document.getElementById('routeTimeline').innerHTML = sel.map(function(p, i) {
-    var start = acc; acc += p.dwell + (i < sel.length - 1 ? move : 0);
-    var fmt = function(m) { return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
-    return '<div class="tl-item"><div class="tl-dot">' + (i + 1) + '</div><div class="tl-body"><div class="tl-name">' + p.emoji + ' ' + p.name + ' ' + (p.must ? '<span style="font-size:.7rem;color:#b71c1c">必看</span>' : '') + '</div><div class="tl-info">⏱ 停留' + p.dwell + '分钟 · ' + fmt(base + start) + '–' + fmt(base + start + p.dwell) + ' · ' + p.desc + '</div></div></div>';
-  }).join('');
+
+  // 统计摘要
+  document.getElementById('routeSummary').innerHTML =
+    '<div class="item">⏰ 出发 <b>' + String(startHour).padStart(2,'0') + ':00</b> → 结束 <b>'+String(Math.floor((startHour*60+used)/60)%24).padStart(2,'0')+':'+String((startHour*60+used)%60).padStart(2,'0')+'</b></div>'+
+    '<div class="item">⏱ 总时长 <b>'+Math.round(used/6)/10+'h</b> / '+hours+'h</div>'+
+    '<div class="item">📍 景点 <b>'+sel.length+'</b> 个</div>'+
+    '<div class="item">✅ 必看 <b>'+sel.filter(function(p){return p.must;}).length+'/'+POIS.filter(function(p){return p.must;}).length+'</b></div>'+
+    '<div class="item">🎯 偏好 <b>'+interest+'</b></div>';
+
+  // 路线地图
+  if (!sel.length) {
+    document.getElementById('routeMap').innerHTML = '<span>时间太短，至少2小时～</span>';
+    document.getElementById('routeTimeline').innerHTML = '';
+  } else {
+    document.getElementById('routeMap').innerHTML =
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:16px;justify-content:center">'+
+      sel.map(function(p,i) {
+        var color = ['#c9a54b','#6d5b3a','#5a4030','#8a6d4a','#4a6d5a','#7a4a5a','#3a4a6d','#5a7a9a','#c97a5a','#7a8a4a','#9a5a7a','#4a8a8a'][i%12];
+        return '<div style="text-align:center;padding:8px"><div style="width:44px;height:44px;border-radius:50%;background:'+color+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin:0 auto 4px">'+p.emoji+'</div><div style="font-size:.7rem;color:#555;max-width:60px;line-height:1.3">'+p.name+'</div></div>'+
+        (i<sel.length-1?'<div style="font-size:1.2rem;color:#ccc">→</div>':'');
+      }).join('')+
+      '</div>';
+
+    // 时间线
+    var acc = 0;
+    document.getElementById('routeTimeline').innerHTML = sel.map(function(p, i) {
+      var start = acc; acc += p.dwell + (i < sel.length - 1 ? move : 0);
+      var realStart = startHour * 60 + start;
+      var realEnd = realStart + p.dwell;
+      var fmt = function(m) { return String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
+      return '<div class="tl-item"><div class="tl-dot">'+(i+1)+'</div><div class="tl-body"><div class="tl-name">'+p.emoji+' '+p.name+' '+(p.must?'<span style="font-size:.7rem;color:#b71c1c">必看</span>':'')+'</div><div class="tl-info">⏱ '+fmt(realStart)+'–'+fmt(realEnd)+' · 停留'+p.dwell+'分钟 · '+p.desc+'</div></div></div>';
+    }).join('');
+  }
 }
 
 // ======== BACK TOP ========
 window.addEventListener('scroll', function() { var b = document.getElementById('backTop'); if (b) b.classList.toggle('show', window.scrollY > 300); });
 
+// ======== ABOUT ========
+var ABOUT = [
+  {name:'灵山大佛',emoji:'🏯',tags:['佛教文化','建筑','历史'],dwell:40,must:true,desc:'通高88米，青铜铸造，世界最高铜佛像之一。右手施无畏印，左手施与愿印，俯瞰太湖。佛像内部有电梯可达佛脚平台，俯瞰太湖美景。'},
+  {name:'灵山梵宫',emoji:'🏛',tags:['建筑','佛教文化','艺术'],dwell:50,must:true,desc:'建筑面积7.2万平方米，造价18亿。金碧辉煌的佛教艺术殿堂，融合传统工艺与现代建筑。内部珍宝馆藏有大量佛教文物。'},
+  {name:'拈花湾',emoji:'🌸',tags:['自然风光','禅意','休闲','夜景'],dwell:90,must:true,desc:'禅意小镇，唐风宋韵。梵天花海3万平方米，四季花海。夜游灯光秀、禅修体验、特色民宿，建议傍晚前往。'},
+  {name:'九龙灌浴',emoji:'⛲',tags:['佛教文化','表演'],dwell:25,must:true,desc:'再现佛陀诞生场景，九龙喷水沐浴太子佛。动态音乐喷泉表演，每天10:00、13:00、15:00上演，建议提前到场。'},
+  {name:'天下第一掌',emoji:'🖐',tags:['佛教文化','建筑'],dwell:15,must:false,desc:'高11.7米，宽5.5米，灵山大佛右手1:1复制品。摸掌祈福，沾福气保平安，游客必打卡点。'},
+  {name:'五印坛城',emoji:'🏯',tags:['建筑','佛教文化','历史'],dwell:30,must:false,desc:'藏传佛教风格建筑，展示藏传佛教艺术。坛城金顶、转经筒、唐卡壁画，感受雪域文化魅力。'},
+];
+function renderAbout() {
+  document.getElementById('aboutCards').innerHTML = ABOUT.map(function(p) {
+    return '<div class="card" style="cursor:pointer" onclick="showPoiDetailAbout(\''+p.name+'\')"><h3>'+p.emoji+' '+p.name+'</h3><p>'+p.desc+'</p><div style="margin-top:8px;font-size:.78rem;color:var(--gold);font-weight:600">点击查看详情 →</div></div>';
+  }).join('');
+}
+function showPoiDetailAbout(name) {
+  var p = ABOUT.find(function(x){return x.name===name;}) || POIS.find(function(x){return x.name===name;});
+  if (!p) return;
+  _curPoi = p;
+  document.getElementById('poi-detail-title').textContent = p.name;
+  document.getElementById('poi-detail-emoji').textContent = p.emoji;
+  document.getElementById('poi-detail-name').textContent = p.name;
+  document.getElementById('poi-detail-desc').textContent = p.desc;
+  document.getElementById('poi-detail-dwell').textContent = '约'+(p.dwell||30)+'分钟';
+  document.getElementById('poi-detail-tags').innerHTML = (p.tags||[]).map(function(t){return'<span class="t">'+t+'</span>';}).join('');
+  document.getElementById('poi-detail-rank').textContent = p.must ? '#必看' : '#推荐';
+  document.getElementById('poi-chat-msgs').innerHTML = '<div class="msg ai">👋 你好！我是灵山数字导游。关于「'+p.name+'」，有什么想了解的吗？</div>';
+  switchPage('poi-detail', null);
+}
+
 // ======== INIT ========
 renderPois();
+renderAbout();
 genRoute(4, document.querySelector('.time-btn.active'));
 connectGuide();
 </script>

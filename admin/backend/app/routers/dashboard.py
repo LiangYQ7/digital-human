@@ -19,9 +19,15 @@ def overview(db: Session = Depends(get_db)):
     today = db.query(ChatLog).filter(ChatLog.created_at >= today0).all()
     week = db.query(ChatLog).filter(ChatLog.created_at >= week_ago).all()
 
+    # 热门问题（用户消息）
     today_qs = [l.content for l in today if l.role == "user"]
     hot = Counter(today_qs).most_common(5)
 
+    # 今日/本周服务人次（按独立会话数，不是消息数）
+    today_sessions = len(set(l.session_id for l in today))
+    week_sessions = len(set(l.session_id for l in week))
+
+    # 满意度趋势（只看AI回复的情感）
     satisfaction = []
     for i in range(6, -1, -1):
         day0 = (now - timedelta(days=i)).replace(
@@ -31,7 +37,7 @@ def overview(db: Session = Depends(get_db)):
         day_logs = [
             l
             for l in week
-            if l.role == "user" and day0 <= l.created_at < day1
+            if l.role == "assistant" and day0 <= l.created_at < day1
         ]
         pos = sum(1 for l in day_logs if l.sentiment == "pos")
         total = max(len(day_logs), 1)
@@ -42,8 +48,8 @@ def overview(db: Session = Depends(get_db)):
         })
 
     return {
-        "today_count": len(today),
-        "week_count": len(week),
+        "today_count": today_sessions,
+        "week_count": week_sessions,
         "hot_questions": [{"question": q, "count": c} for q, c in hot],
         "satisfaction_trend": satisfaction,
     }
