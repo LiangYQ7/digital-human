@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s http://localhost:8011/api/avatar/voices)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); voices=d['voices']; print\\(f'total: {len\\(voices\\)} voices'\\); [print\\(f'  {v[\\\\\"id\\\\\"]}: {v[\\\\\"name\\\\\"]}'\\) for v in voices]\")",
+      "Bash(taskkill //PID 10200 //F)",
+      "Bash(D:/conda_data/envs/livetalking/python.exe -c \"import torch; print\\('CUDA available:', torch.cuda.is_available\\(\\)\\); print\\('Device count:', torch.cuda.device_count\\(\\)\\); print\\('Device name:', torch.cuda.get_device_name\\(0\\) if torch.cuda.is_available\\(\\) else 'N/A'\\)\")",
+      "Bash(D:/conda_data/envs/livetalking/python.exe -c ' *)",
+      "Bash(git log *)",
+      "Bash(git fetch *)",
+      "Bash(git check-ignore *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'chore: 同步本地工作区改动 *)",
+      "Bash(git pull *)",
+      "Bash(git push *)"
+    ]
+  }
+}
