@@ -85,8 +85,12 @@ input[type=file]{width:auto}
   <div id="page-dashboard" class="page active">
     <div class="stats" id="stats"></div>
     <div class="row">
-      <div class="card"><h3>热门问答 TOP5</h3><div class="chart" id="chart-hot"></div></div>
+      <div class="card"><h3>热门问答 TOP8</h3><div class="chart" id="chart-hot"></div></div>
       <div class="card"><h3>服务人次趋势（近7天）</h3><div class="chart" id="chart-trend"></div></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <div class="card"><h3>时段分布（近7天）</h3><div class="chart" id="chart-hourly"></div></div>
+      <div class="card"><h3>关注主题分布</h3><div class="chart" id="chart-topic"></div></div>
     </div>
   </div>
 
@@ -166,11 +170,17 @@ input[type=file]{width:auto}
   </div>
 
   <div id="page-report" class="page">
-    <div class="card"><h3>游客感受度报告</h3>
-      <div class="gap-4"><select id="report-days" onchange="loadReport()"><option value="7">近7天</option><option value="30">近30天</option><option value="90">近90天</option></select><span id="report-total" style="color:#888;font-size:13px"></span></div>
+    <div class="card">
+      <h3>游客感受度报告</h3>
+      <div class="gap-4" style="margin-bottom:16px">
+        <select id="report-days" onchange="loadReport()"><option value="7">近7天</option><option value="30">近30天</option><option value="90">近90天</option></select>
+        <span id="report-summary" style="color:#888;font-size:13px"></span>
+      </div>
+      <div class="stats" id="report-stats"></div>
       <div class="row mt-3"><div class="chart" id="chart-sentiment"></div><div class="chart" id="chart-keywords"></div></div>
-      <div class="card mt-3"><h3>运营建议</h3><div id="suggestions"></div></div>
+      <div class="row" style="margin-top:16px"><div class="chart" id="chart-report-hourly"></div><div class="chart" id="chart-report-topic"></div></div>
     </div>
+    <div class="card"><h3>智能运营建议</h3><div id="suggestions"></div></div>
   </div>
 </main>
 <div class="toast" id="toast"></div>
@@ -198,12 +208,37 @@ function toast(msg, ok) {
 
 // ---- Dashboard ----
 async function loadDashboard() {
-  const r = await (await fetch(ADMIN + '/api/dashboard/overview')).json();
-  document.getElementById('stats').innerHTML = '<div class="stat"><div class="num">'+r.today_count+'</div><div class="label">今日服务人次</div></div><div class="stat"><div class="num">'+r.week_count+'</div><div class="label">近7天服务人次</div></div>';
+  var dash = await (await fetch(ADMIN + '/api/dashboard/overview')).json();
+  var rep = await (await fetch(ADMIN + '/api/report/insights?days=7')).json();
+
+  // 统计卡片
+  var satPct = dash.satisfaction_trend && dash.satisfaction_trend.length
+    ? Math.round(dash.satisfaction_trend[dash.satisfaction_trend.length-1].satisfaction * 100) : 0;
+  document.getElementById('stats').innerHTML =
+    '<div class="stat"><div class="num">'+dash.today_count+'</div><div class="label">今日服务人次</div></div>'+
+    '<div class="stat"><div class="num">'+dash.week_count+'</div><div class="label">近7天服务人次</div></div>'+
+    '<div class="stat"><div class="num">'+satPct+'%</div><div class="label">游客满意度</div></div>'+
+    '<div class="stat"><div class="num">'+rep.avg_latency_sec+'s</div><div class="label">平均响应时间</div></div>';
+
+  // 热门问答
   if (!charts.hot) charts.hot = echarts.init(document.getElementById('chart-hot'));
-  charts.hot.setOption({tooltip:{},xAxis:{type:'value'},yAxis:{type:'category',data:r.hot_questions.map(q=>q.question).reverse(),axisLabel:{width:100,overflow:'truncate'}},series:[{type:'bar',data:r.hot_questions.map(q=>q.count).reverse(),itemStyle:{color:'#2d5a3f'},barMaxWidth:30}],grid:{left:100,right:20}});
+  var hq = dash.hot_questions.slice(0,8);
+  charts.hot.setOption({tooltip:{},xAxis:{type:'value',axisLine:{show:false},splitLine:{lineStyle:{color:'#f0f0f0'}}},yAxis:{type:'category',data:hq.map(function(q){return q.question;}).reverse(),axisLabel:{width:110,overflow:'truncate',fontSize:11},axisLine:{show:false}},series:[{type:'bar',data:hq.map(function(q){return q.count;}).reverse(),barWidth:20,itemStyle:{borderRadius:[0,4,4,0],color:'#2d5a3f'}}],grid:{left:115,right:20,top:5,bottom:5}});
+
+  // 服务趋势
   if (!charts.trend) charts.trend = echarts.init(document.getElementById('chart-trend'));
-  charts.trend.setOption({tooltip:{},legend:{data:['服务人次','满意度']},xAxis:{type:'category',data:r.satisfaction_trend.map(s=>s.date)},yAxis:[{type:'value',name:'人次'},{type:'value',name:'满意度',max:1}],series:[{name:'服务人次',type:'bar',data:r.satisfaction_trend.map(s=>s.count),itemStyle:{color:'#2d5a3f'},barMaxWidth:30},{name:'满意度',type:'line',yAxisIndex:1,data:r.satisfaction_trend.map(s=>s.satisfaction),itemStyle:{color:'#e6a817'}}],grid:{left:50,right:50}});
+  var st = dash.satisfaction_trend;
+  charts.trend.setOption({tooltip:{},legend:{data:['服务人次','满意度'],bottom:0},xAxis:{type:'category',data:st.map(function(s){return s.date;})},yAxis:[{type:'value',name:'人次'},{type:'value',name:'满意度',max:1,axisLabel:{formatter:function(v){return Math.round(v*100)+'%';}}}],series:[{name:'服务人次',type:'bar',data:st.map(function(s){return s.count;}),barWidth:22,itemStyle:{borderRadius:[4,4,0,0],color:'#2d5a3f'}},{name:'满意度',type:'line',yAxisIndex:1,data:st.map(function(s){return s.satisfaction;}),smooth:true,symbol:'circle',symbolSize:6,lineStyle:{color:'#e6a817',width:2.5},areaStyle:{color:'rgba(230,168,23,.15)'}}],grid:{left:50,right:50,top:20,bottom:40}});
+
+  // 时段分布
+  if (!charts.hourly) charts.hourly = echarts.init(document.getElementById('chart-hourly'));
+  var hd = rep.hourly_distribution || [];
+  charts.hourly.setOption({tooltip:{},xAxis:{type:'category',data:hd.map(function(h){return h.hour;}),axisLabel:{fontSize:10}},yAxis:{type:'value',name:'咨询量',splitLine:{lineStyle:{color:'#f5f5f5'}}},series:[{type:'bar',data:hd.map(function(h){return h.count;}),barWidth:'60%',itemStyle:{borderRadius:[4,4,0,0],color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#5a8a6a'},{offset:1,color:'#a5c8a5'}])}}],grid:{left:45,right:15,top:15,bottom:30}});
+
+  // 主题分布
+  if (!charts.topic) charts.topic = echarts.init(document.getElementById('chart-topic'));
+  var tp = rep.topic_breakdown || [];
+  charts.topic.setOption({tooltip:{trigger:'item',formatter:'{b}: {c}次 ({d}%)'},series:[{type:'pie',radius:['40%','70%'],center:['50%','55%'],data:tp.map(function(t){return{name:t.topic,value:t.count};}),label:{fontSize:11,formatter:'{b}\n{d}%'},emphasis:{label:{fontSize:14}}}],grid:{}});
 }
 
 // ---- Knowledge ----
@@ -231,7 +266,43 @@ async function switchAvatar(id){const ov=document.getElementById('av-loading'),b
 async function deleteAvatar(id){if(!confirm('确定要删除角色「'+id+'」吗？此操作不可恢复。'))return;const r=await(await fetch(ADMIN+'/api/avatar/delete-avatar?avatar_id='+encodeURIComponent(id),{method:'POST'})).json();if(r.deleted){toast('已删除: '+id,1);loadDiskAvatars();}else toast('删除失败: '+(r.error||'未知错误'),0);}
 
 // ---- Report ----
-async function loadReport(){const days=document.getElementById('report-days').value,r=await(await fetch(ADMIN+'/api/report/insights?days='+days)).json();document.getElementById('report-total').textContent='共 '+r.total_interactions+' 次交互';if(!charts.sentiment)charts.sentiment=echarts.init(document.getElementById('chart-sentiment'));charts.sentiment.setOption({title:{text:'情感分布',textStyle:{fontSize:14}},tooltip:{},series:[{type:'pie',radius:['40%','70%'],data:[{name:'正面',value:r.sentiment_trend.pos||0,itemStyle:{color:'#2d5a3f'}},{name:'中性',value:r.sentiment_trend.neutral||0,itemStyle:{color:'#888'}},{name:'负面',value:r.sentiment_trend.neg||0,itemStyle:{color:'#e74c3c'}}],label:{show:true,formatter:'{b}: {c}'}}]});if(!charts.keywords)charts.keywords=echarts.init(document.getElementById('chart-keywords'));charts.keywords.setOption({title:{text:'热门关键词',textStyle:{fontSize:14}},tooltip:{},xAxis:{type:'value'},yAxis:{type:'category',data:r.top_keywords.map(k=>k.word).reverse()},series:[{type:'bar',data:r.top_keywords.map(k=>k.count).reverse(),itemStyle:{color:'#2d5a8f'},barMaxWidth:24}],grid:{left:80,right:20}});document.getElementById('suggestions').innerHTML=(r.suggestions||[]).map(s=>'<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px">💡 '+s+'</div>').join('')||'<span style="color:#888">暂无建议</span>';}
+async function loadReport(){
+  var days=document.getElementById('report-days').value;
+  var r=await(await fetch(ADMIN+'/api/report/insights?days='+days)).json();
+  document.getElementById('report-summary').textContent='共 '+r.total_interactions+' 次交互 · 平均响应 '+r.avg_latency_sec+' 秒 · 热门问题 '+r.hot_questions.length+' 类';
+
+  // 统计卡
+  var pos=r.sentiment_trend.pos||0, neg=r.sentiment_trend.neg||0, neu=r.sentiment_trend.neutral||0;
+  document.getElementById('report-stats').innerHTML=
+    '<div class="stat"><div class="num" style="color:#4caf50">'+pos+'</div><div class="label">正面评价</div></div>'+
+    '<div class="stat"><div class="num" style="color:#9e9e9e">'+neu+'</div><div class="label">中性评价</div></div>'+
+    '<div class="stat"><div class="num" style="color:#ef5350">'+neg+'</div><div class="label">负面评价</div></div>'+
+    '<div class="stat"><div class="num">'+r.total_interactions+'</div><div class="label">用户消息总数</div></div>';
+
+  // 情感饼图
+  if(!charts.sentiment)charts.sentiment=echarts.init(document.getElementById('chart-sentiment'));
+  charts.sentiment.setOption({title:{text:'情感分布',left:'center',textStyle:{fontSize:14}},tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},series:[{type:'pie',radius:['45%','70%'],center:['50%','55%'],data:[{name:'正面',value:pos,itemStyle:{color:'#4caf50'}},{name:'中性',value:neu,itemStyle:{color:'#9e9e9e'}},{name:'负面',value:neg,itemStyle:{color:'#ef5350'}}],label:{formatter:'{b}\n{d}%',fontSize:12}}]});
+
+  // 关键词柱状图（jieba分词结果）
+  if(!charts.keywords)charts.keywords=echarts.init(document.getElementById('chart-keywords'));
+  var kw=(r.top_keywords||[]).slice(0,12);
+  charts.keywords.setOption({title:{text:'热门关键词（分词提取）',left:'center',textStyle:{fontSize:14}},tooltip:{},xAxis:{type:'value',axisLine:{show:false},splitLine:{lineStyle:{color:'#f0f0f0'}}},yAxis:{type:'category',data:kw.map(function(k){return k.word;}).reverse(),axisLabel:{fontSize:11},axisLine:{show:false}},series:[{type:'bar',data:kw.map(function(k){return k.count;}).reverse(),barWidth:18,itemStyle:{borderRadius:[0,4,4,0],color:'#2d5a8f'}}],grid:{left:90,right:20,top:40,bottom:10}});
+
+  // 时段分布（报告页）
+  if(!charts.reportHourly)charts.reportHourly=echarts.init(document.getElementById('chart-report-hourly'));
+  var hd=r.hourly_distribution||[];
+  charts.reportHourly.setOption({title:{text:'咨询时段分布',left:'center',textStyle:{fontSize:14}},tooltip:{},xAxis:{type:'category',data:hd.map(function(h){return h.hour;}),axisLabel:{fontSize:10}},yAxis:{type:'value',name:'咨询量'},series:[{type:'bar',data:hd.map(function(h){return h.count;}),barWidth:'60%',itemStyle:{borderRadius:[4,4,0,0],color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#667eea'},{offset:1,color:'#764ba2'}])}}],grid:{left:45,right:15,top:45,bottom:30}});
+
+  // 主题分布（报告页）
+  if(!charts.reportTopic)charts.reportTopic=echarts.init(document.getElementById('chart-report-topic'));
+  var tp=r.topic_breakdown||[];
+  charts.reportTopic.setOption({title:{text:'关注主题分布',left:'center',textStyle:{fontSize:14}},tooltip:{trigger:'item',formatter:'{b}: {c}次 ({d}%)'},series:[{type:'pie',radius:['40%','70%'],center:['50%','55%'],data:tp.map(function(t){return{name:t.topic,value:t.count};}),label:{fontSize:11,formatter:'{b}\n{d}%'},emphasis:{label:{fontSize:14,fontWeight:'bold'}}}]});
+
+  // 建议
+  document.getElementById('suggestions').innerHTML=(r.suggestions||[]).map(function(s,i){
+    return '<div style="padding:10px 14px;margin-bottom:6px;border-radius:6px;background:'+(i===0?'#fff3e0':i===1?'#e8f5e9':'#e3f2fd')+';border-left:3px solid '+(i===0?'#ff9800':i===1?'#4caf50':'#2196f3')+';font-size:13px">💡 '+s+'</div>';
+  }).join('')||'<span style="color:#888">暂无建议</span>';
+}
 
 loadDashboard();
 window.addEventListener("DOMContentLoaded",()=>{if(!avSid)avConnect();});
