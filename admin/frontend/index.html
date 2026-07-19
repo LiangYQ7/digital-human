@@ -61,6 +61,13 @@ input[type=file]{width:auto}
 .status-badge{font-size:11px;padding:2px 8px;border-radius:10px}
 .status-badge.on{background:#1b5e20;color:#a5d6a7}
 .status-badge.off{background:#b71c1c;color:#ef9a9a}
+.avatar-video-box{position:relative}
+.avatar-loading{position:absolute;top:0;left:0;right:0;bottom:36px;background:rgba(0,0,0,.85);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:10;color:#fff;border-radius:10px 10px 0 0}
+.avatar-loading .sp{width:36px;height:36px;border:3px solid rgba(255,255,255,.2);border-top-color:#2d5a3f;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.avatar-loading .lt{font-size:14px;margin:12px 0 8px;color:#ccc}
+.avatar-loading .lb{width:60%;max-width:200px;height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden}
+.avatar-loading .lf{height:100%;width:0%;background:#2d5a3f;border-radius:3px;transition:width .3s}
 @media(max-width:900px){.avatar-row{flex-direction:column}.avatar-right{width:100%}.avatar-video-box video{height:300px}}
 </style>
 </head>
@@ -96,6 +103,11 @@ input[type=file]{width:auto}
         <div class="avatar-video-box">
           <video id="av-video" autoplay playsinline muted></video>
           <audio id="av-audio" autoplay></audio>
+          <div class="avatar-loading" id="av-loading">
+            <div class="sp"></div>
+            <div class="lt">正在切换角色...</div>
+            <div class="lb"><div class="lf" id="av-loading-bar"></div></div>
+          </div>
           <div class="ctrl">
             <input id="av-avatar" value="wav2lip256_avatar1" style="width:120px" title="Avatar ID">
             <input id="av-refaudio" value="zh-CN-XiaoxiaoNeural" style="width:140px" title="参考音频">
@@ -144,6 +156,11 @@ input[type=file]{width:auto}
             <a href="http://localhost:8011/" target="_blank" class="btn btn-outline btn-sm">用户端首页</a>
           </div>
         </div>
+        <div class="card"><h3>🔄 角色替换</h3>
+          <div id="avatar-switch-list">
+            <span style="color:#888;font-size:12px">加载中...</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -169,7 +186,7 @@ function switchPage(name, btn) {
   btn.classList.add('active');
   if (name === 'dashboard') loadDashboard();
   if (name === 'knowledge') loadDocs();
-  if (name === 'avatar') { loadVoices(); if (!avSid) avConnect(); }
+  if (name === 'avatar') { loadVoices(); loadDiskAvatars(); if (!avSid) avConnect(); }
   if (name === 'report') loadReport();
 }
 
@@ -197,10 +214,10 @@ async function loadDocs() {const d=await(await fetch(ADMIN+'/api/knowledge/docs'
 // ---- Avatar LiveTalking ----
 const AV='/lt';let avPc=null,avSid=null,avRecording=false;
 function avSetStatus(on){const e=document.getElementById('av-status');e.className='status-badge '+(on?'on':'off');e.textContent=on?'已连接':'未连接';document.getElementById('av-sid').textContent=avSid?'SID:'+avSid.slice(0,8)+'...':'';}
-let avConnecting=false,avVoice="zh-CN-XiaoxiaoNeural";
+let avConnecting=false,avSending=false,avVoice="zh-CN-XiaoxiaoNeural";
 function avConnect(){if(avConnecting||avPc)return;avConnecting=true;avPc=new RTCPeerConnection({sdpSemantics:'unified-plan'});avPc.addTransceiver('video',{direction:'recvonly'});avPc.addTransceiver('audio',{direction:'recvonly'});avPc.addEventListener('track',evt=>{if(evt.track.kind==='video')document.getElementById('av-video').srcObject=evt.streams[0];else document.getElementById('av-audio').srcObject=evt.streams[0];});avPc.addEventListener('connectionstatechange',()=>{if(avPc.connectionState==='connected')avSetStatus(true);else if(avPc.connectionState==='disconnected'||avPc.connectionState==='failed')avSetStatus(false);});avPc.createOffer().then(o=>avPc.setLocalDescription(o)).then(()=>new Promise(r=>{if(avPc.iceGatheringState==='complete')r();else avPc.addEventListener('icegatheringstatechange',()=>{if(avPc.iceGatheringState==='complete')r();});})).then(()=>{return fetch(AV+'/offer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sdp:avPc.localDescription.sdp,type:avPc.localDescription.type,avatar:document.getElementById('av-avatar').value,refaudio:document.getElementById('av-refaudio').value})});}).then(r=>r.json()).then(a=>{if(!a.sdp)throw new Error('no sdp');avSid=a.sessionid||'';avSetStatus(true);avConnecting=false;return avPc.setRemoteDescription(new RTCSessionDescription({type:'answer',sdp:a.sdp}));}).catch(e=>{avConnecting=false;toast('连接失败: '+e.message,0);avDisconnect();});}
 function avDisconnect(){if(avPc){avPc.close();avPc=null;}avConnecting=false;avSetStatus(false);avSid=null;document.getElementById('av-video').srcObject=null;document.getElementById('av-audio').srcObject=null;}
-function avSendText(){if(!avSid)return toast('请先连接',0);const t=document.getElementById('av-text').value.trim();if(!t)return;fetch(AV+'/human',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,type:document.getElementById('av-type').value,interrupt:true,sessionid:avSid,tts:{ref_file:avVoice}})}).then(r=>r.json()).then(d=>{document.getElementById('av-text').value='';toast('已发送',1);});}
+function avSendText(){if(!avSid)return toast('请先连接',0);if(avSending)return;const t=document.getElementById('av-text').value.trim();if(!t)return;avSending=true;document.getElementById('av-text').value='';toast('已发送',1);fetch(AV+'/human',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,type:document.getElementById('av-type').value,interrupt:true,sessionid:avSid,tts:{ref_file:avVoice}})}).then(r=>r.json()).then(d=>{avSending=false;}).catch(e=>{avSending=false;toast('发送失败',0);});}
 function avInterrupt(){if(!avSid)return;fetch(AV+'/interrupt_talk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionid:avSid})}).then(r=>r.json()).then(d=>toast('已打断',1));}
 function avUploadAudio(){const f=document.getElementById('av-audiofile').files[0];if(!f||!avSid)return toast('请先连接并选文件',0);const fd=new FormData();fd.append('file',f);fd.append('sessionid',avSid);fetch(AV+'/humanaudio',{method:'POST',body:fd}).then(r=>r.json()).then(d=>toast('已播放',1));}
 function avToggleRecord(){if(!avSid)return toast('请先连接',0);const t=avRecording?'end_record':'start_record';fetch(AV+'/record',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:t,sessionid:avSid})}).then(r=>r.json()).then(d=>{avRecording=!avRecording;const b=document.getElementById('av-rec-btn');b.textContent=avRecording?'停止录制':'开始录制';b.className=avRecording?'btn btn-danger btn-sm':'btn btn-outline btn-sm';document.getElementById('av-dl-btn').disabled=avRecording;});}
@@ -209,6 +226,9 @@ function avSetAudiotype(){if(!avSid)return toast('请先连接',0);fetch(AV+'/se
 async function loadVoices(){const d=await(await fetch(ADMIN+'/api/avatar/voices')).json();document.getElementById('voice-list').innerHTML=d.voices.map(v=>'<button class="btn btn-outline btn-sm" onclick="setVoice(\''+v.id+'\')">'+v.name+'</button>').join('');loadActiveAvatar();}
 async function setVoice(voice){const r=await(await fetch(ADMIN+'/api/avatar/activate-voice?voice='+encodeURIComponent(voice),{method:'POST'})).json();if(r.synced){avVoice=voice;document.getElementById("av-refaudio").value=voice;toast('音色已切换: '+r.name,1)}else toast('切换失败: '+(r.error||'未知错误'),0);loadActiveAvatar();}
 async function loadActiveAvatar(){const a=await(await fetch(ADMIN+'/api/avatar/active')).json();document.getElementById('active-avatar').innerHTML='<span class="tag tag-green">当前: '+a.name+'</span> 音色: '+a.voice;}
+async function loadDiskAvatars(){const d=await(await fetch(ADMIN+'/api/avatar/disk-avatars')).json();const c=document.getElementById('avatar-switch-list');if(!d.avatars||d.avatars.length===0){c.innerHTML='<span style="color:#888;font-size:12px">暂无可用形象</span>';return;}c.innerHTML='<table><thead><tr><th>角色ID</th><th>操作</th></tr></thead><tbody>'+d.avatars.map(a=>'<tr><td>'+a.id+'</td><td>'+(a.valid?'<button class="btn btn-primary btn-sm" onclick="switchAvatar(\''+a.id+'\')">使用</button>':'<span style="color:#999;font-size:12px">数据不完整</span>')+(a.id==='wav2lip256_avatar1'?'':' <button class="btn btn-danger btn-sm" onclick="deleteAvatar(\''+a.id+'\')">删除</button>')+'</td></tr>').join('')+'</tbody></table>';}
+async function switchAvatar(id){const ov=document.getElementById('av-loading'),bar=document.getElementById('av-loading-bar');ov.style.display='flex';bar.style.width='20%';let p=20,tmr=setInterval(()=>{p=Math.min(p+(85-p)*.12,80);bar.style.width=Math.round(p)+'%'},300);const r=await(await fetch(ADMIN+'/api/avatar/switch-avatar?avatar_id='+encodeURIComponent(id),{method:'POST'})).json();if(!r.synced){clearInterval(tmr);ov.style.display='none';return toast('切换失败: '+(r.error||'未知错误'),0)}document.getElementById('av-avatar').value=id;avDisconnect();setTimeout(()=>{clearInterval(tmr);bar.style.width='90%';avConnect();const ci=setInterval(()=>{if(document.getElementById('av-status').classList.contains('on')){clearInterval(ci);bar.style.width='100%';setTimeout(()=>{ov.style.display='none';toast('已切换到: '+id,1)},300)}},500);setTimeout(()=>{clearInterval(ci);ov.style.display='none'},15000)},800);}
+async function deleteAvatar(id){if(!confirm('确定要删除角色「'+id+'」吗？此操作不可恢复。'))return;const r=await(await fetch(ADMIN+'/api/avatar/delete-avatar?avatar_id='+encodeURIComponent(id),{method:'POST'})).json();if(r.deleted){toast('已删除: '+id,1);loadDiskAvatars();}else toast('删除失败: '+(r.error||'未知错误'),0);}
 
 // ---- Report ----
 async function loadReport(){const days=document.getElementById('report-days').value,r=await(await fetch(ADMIN+'/api/report/insights?days='+days)).json();document.getElementById('report-total').textContent='共 '+r.total_interactions+' 次交互';if(!charts.sentiment)charts.sentiment=echarts.init(document.getElementById('chart-sentiment'));charts.sentiment.setOption({title:{text:'情感分布',textStyle:{fontSize:14}},tooltip:{},series:[{type:'pie',radius:['40%','70%'],data:[{name:'正面',value:r.sentiment_trend.pos||0,itemStyle:{color:'#2d5a3f'}},{name:'中性',value:r.sentiment_trend.neutral||0,itemStyle:{color:'#888'}},{name:'负面',value:r.sentiment_trend.neg||0,itemStyle:{color:'#e74c3c'}}],label:{show:true,formatter:'{b}: {c}'}}]});if(!charts.keywords)charts.keywords=echarts.init(document.getElementById('chart-keywords'));charts.keywords.setOption({title:{text:'热门关键词',textStyle:{fontSize:14}},tooltip:{},xAxis:{type:'value'},yAxis:{type:'category',data:r.top_keywords.map(k=>k.word).reverse()},series:[{type:'bar',data:r.top_keywords.map(k=>k.count).reverse(),itemStyle:{color:'#2d5a8f'},barMaxWidth:24}],grid:{left:80,right:20}});document.getElementById('suggestions').innerHTML=(r.suggestions||[]).map(s=>'<div style="padding:6px 0;border-bottom:1px solid #eee;font-size:13px">💡 '+s+'</div>').join('')||'<span style="color:#888">暂无建议</span>';}

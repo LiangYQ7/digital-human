@@ -29,7 +29,7 @@ function connect(){
       else pc.addEventListener('icegatheringstatechange',()=>{if(pc.iceGatheringState==='complete')r();});
     })).then(()=>{
       log('发送offer...');
-      return fetch('http://localhost:8010/offer',{
+      return fetch('/lt/offer',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({sdp:pc.localDescription.sdp,type:pc.localDescription.type})

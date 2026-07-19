@@ -46,8 +46,18 @@ def _sync_to_brain(voice: str, name: str):
 
 @router.get("/voices")
 def list_voices():
-    """获取所有可用的音色选项。"""
-    return {"voices": AVAILABLE_VOICES}
+    """列出所有可用音色（edge-tts + CosyVoice 克隆音色）。"""
+    voices = list(AVAILABLE_VOICES)
+    try:
+        import requests as req
+        r = req.get("http://127.0.0.1:8091/v1/audio/voices", timeout=3)
+        if r.ok:
+            data = r.json()
+            for v in data.get("uploaded_voices", []):
+                voices.append({"id": f"cosyvoice:{v['name']}", "name": f"{v['name']}（CosyVoice）", "gender": "克隆"})
+    except Exception:
+        pass
+    return {"voices": voices}
 
 
 @router.post("")
@@ -75,7 +85,7 @@ def list_all(db: Session = Depends(get_db)):
 def get_active():
     """获取当前激活的形象配置。"""
     config_path = (
-        Path(__file__).parent.parent.parent.parent
+        Path(__file__).parent.parent.parent.parent.parent
         / "brain" / "config" / "active_avatar.json"
     )
     try:
@@ -86,16 +96,83 @@ def get_active():
     return {"name": "小灵", "voice": "zh-CN-XiaoxiaoNeural", "avatar_id": "wav2lip256_avatar1"}
 
 
+@router.get("/disk-avatars")
+def list_disk_avatars():
+    """扫描磁盘 third_party/LiveTalking/data/avatars/ 下的可用形象目录。"""
+    base = (
+        Path(__file__).parent.parent.parent.parent.parent
+        / "third_party" / "LiveTalking" / "data" / "avatars"
+    )
+    if not base.exists():
+        return {"avatars": []}
+    avatars = []
+    for d in sorted(base.iterdir()):
+        if d.is_dir():
+            # 检查是否包含完整的形象数据
+            has_coords = (d / "coords.pkl").exists()
+            has_full = (d / "full_imgs").is_dir()
+            has_face = (d / "face_imgs").is_dir()
+            avatars.append({
+                "id": d.name,
+                "valid": has_coords and has_full and has_face,
+            })
+    return {"avatars": avatars}
+
+
+@router.post("/switch-avatar")
+def switch_avatar(avatar_id: str = Query(...)):
+    """切换当前激活形象的 avatar_id。"""
+    config_path = (
+        Path(__file__).parent.parent.parent.parent.parent
+        / "brain" / "config" / "active_avatar.json"
+    )
+    try:
+        if config_path.exists():
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+        else:
+            config = {"voice": "zh-CN-XiaoxiaoNeural"}
+        config["avatar_id"] = avatar_id
+        config["name"] = avatar_id
+        config_path.write_text(
+            json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        return {"avatar_id": avatar_id, "synced": True}
+    except Exception as e:
+        return {"error": str(e), "synced": False}
+
+
+@router.post("/delete-avatar")
+def delete_avatar(avatar_id: str = Query(...)):
+    """删除磁盘上的形象目录（内置形象 wav2lip256_avatar1 受保护）。"""
+    PROTECTED = ["wav2lip256_avatar1"]
+    if avatar_id in PROTECTED:
+        return {"error": f"内置形象 {avatar_id} 不允许删除", "synced": False}
+
+    base = (
+        Path(__file__).parent.parent.parent.parent.parent
+        / "third_party" / "LiveTalking" / "data" / "avatars"
+    )
+    target = base / avatar_id
+    if not target.exists() or not target.is_dir():
+        return {"error": f"形象目录不存在: {avatar_id}", "synced": False}
+
+    import shutil
+    shutil.rmtree(target)
+    return {"avatar_id": avatar_id, "deleted": True}
+
+
 @router.post("/activate-voice")
-def activate_voice(voice: str = Query(...), db: Session = Depends(get_db)):
-    """直接激活一个音色（无需创建形象）。"""
-    if not any(v["id"] == voice for v in AVAILABLE_VOICES):
-        return {"error": f"不支持的音色: {voice}"}
-
-    voice_name = next(v["name"] for v in AVAILABLE_VOICES if v["id"] == voice)
-    _sync_to_brain(voice, voice_name)
-
-    return {"voice": voice, "name": voice_name, "synced": True}
+def activate_voice(voice: str = Query(...)):
+    """直接激活一个音色（支持 edge-tts 和 CosyVoice 克隆音色）。"""
+    edge_v = next((v for v in AVAILABLE_VOICES if v["id"] == voice), None)
+    if edge_v:
+        _sync_to_brain(voice, edge_v["name"])
+        return {"voice": voice, "name": edge_v["name"], "synced": True}
+    if voice.startswith("cosyvoice:"):
+        clone_name = voice.replace("cosyvoice:", "")
+        _sync_to_brain(voice, clone_name)
+        return {"voice": voice, "name": clone_name, "synced": True}
+    return {"error": f"不支持的音色: {voice}", "synced": False}
 
 
 @router.post("/{aid}/activate")

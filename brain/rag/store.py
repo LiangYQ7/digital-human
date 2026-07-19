@@ -39,13 +39,12 @@ def _get_client() -> chromadb.PersistentClient:
 def _get_embedding_fn() -> embedding_functions.SentenceTransformerEmbeddingFunction:
     global _EMBEDDING_FN
     if _EMBEDDING_FN is None:
-        # 国内镜像：通过 HF_ENDPOINT 环境变量告知 sentence_transformers 从镜像下载
         model = os.getenv("EMBED_MODEL", DEFAULT_EMBED_MODEL)
-        hf_endpoint = os.getenv("HF_ENDPOINT", "")
-        if hf_endpoint:
-            os.environ.setdefault("HF_ENDPOINT", hf_endpoint)
+        # 本地优先：如果 ModelScope 缓存存在就直接用，不走网络
+        local_path = Path("D:/huggingface_models/models/BAAI--bge-m3/snapshots/master")
+        model_name = str(local_path) if local_path.exists() else model
         _EMBEDDING_FN = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name=model,
+            model_name=model_name,
         )
     return _EMBEDDING_FN
 

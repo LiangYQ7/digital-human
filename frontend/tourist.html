@@ -265,7 +265,7 @@ function connectGuide() {
       if (pcGuide.iceGatheringState === 'complete') r();
       else pcGuide.addEventListener('icegatheringstatechange', () => { if (pcGuide.iceGatheringState === 'complete') r(); });
     })).then(() => {
-      return fetch('http://localhost:8010/offer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sdp: pcGuide.localDescription.sdp, type: pcGuide.localDescription.type }) });
+      return fetch('/lt/offer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sdp: pcGuide.localDescription.sdp, type: pcGuide.localDescription.type }) });
     }).then(r => r.json()).then(a => {
       if (a.sdp) {
         sessionid = a.sessionid || '';

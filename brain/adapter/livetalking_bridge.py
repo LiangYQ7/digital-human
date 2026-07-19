@@ -30,26 +30,43 @@ def _base_url() -> str:
 
 
 def send_text(text: str, sessionid: str) -> bool:
-    """把回复文本推给 LiveTalking，合成语音并驱动口型。
-
-    自动注入当前激活的音色（voice）和速度（rate）。
-    """
+    """把回复文本推给数字人，支持 edge-tts 和 CosyVoice 音色。"""
     voice = _get_active_voice()
+    # CosyVoice 音色走 CosyVoice + LiveTalking 音频驱动
+    if voice.startswith('cosyvoice:'):
+        clone_name = voice.replace('cosyvoice:', '')
+        try:
+            # 1. CosyVoice 合成音频
+            r = requests.post('http://127.0.0.1:8091/v1/audio/speech',
+                              json={'input': text, 'voice': clone_name}, timeout=30)
+            if r.status_code != 200:
+                print(f"[SEND] TTS 失败 ({clone_name}): {r.status_code}", flush=True)
+                return False
+            print(f"[SEND] TTS 完成 ({clone_name}): {len(r.content)} bytes", flush=True)
+            # 2. 通过 /humanaudio 推给数字人播放
+            files = {'file': ('tts.wav', r.content, 'audio/wav')}
+            r2 = requests.post(f"{_base_url()}/humanaudio",
+                               data={'sessionid': sessionid}, files=files, timeout=10)
+            if r2.status_code != 200:
+                print(f"[SEND] /humanaudio 失败: {r2.status_code} {r2.text[:200]}", flush=True)
+                return False
+            print(f"[SEND] /humanaudio OK (sid={sessionid[:8]}...)", flush=True)
+            return True
+        except Exception as e:
+            print(f"[SEND] 异常: {e}", flush=True)
+            return False
+    # edge-tts 音色走 LiveTalking
     try:
-        r = requests.post(
-            f"{_base_url()}/human",
-            json={
-                "text": text,
-                "type": "echo",
-                "sessionid": sessionid,
-                "tts": {
-                    "ref_file": voice,     # edge-tts 读的是 ref_file，不是 voice
-                },
-            },
-            timeout=10,
-        )
-        return r.status_code == 200 and r.json().get("code", -1) == 0
-    except Exception:
+        r = requests.post(f"{_base_url()}/human",
+            json={'text': text, 'type': 'echo', 'sessionid': sessionid,
+                  'tts': {'ref_file': voice}},
+            timeout=10)
+        ok = r.status_code == 200 and r.json().get("code", -1) == 0
+        if not ok:
+            print(f"[SEND] /human 失败: {r.status_code} {r.text[:200]}", flush=True)
+        return ok
+    except Exception as e:
+        print(f"[SEND] 异常: {e}", flush=True)
         return False
 
 
