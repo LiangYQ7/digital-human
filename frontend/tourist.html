@@ -569,12 +569,9 @@ function handleImageFile(event) {
       // QR 扫码模式：直接解码，不进入聊天流
       tryDecodeQR(dataUrl);
     } else if (pendingLocate) {
-      // 定位模式：进入聊天流，发送时附带"我在哪"
+      // 定位模式：拍完自动发送，不需要手动按回车
       pendingImage = dataUrl;
-      document.getElementById('imagePreviewImg').src = dataUrl;
-      document.getElementById('imagePreview').style.display = 'block';
-      document.getElementById('chatInput').placeholder = t('photo_placeholder');
-      document.getElementById('chatInput').focus();
+      sendText();  // ponytail: 定位模式下选中图片即发，省一步操作
     } else {
       // 拍照识景模式
       pendingImage = dataUrl;
