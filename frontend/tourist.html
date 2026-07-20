@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>灵山胜境 — 数字人智能导览</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <style>
 :root { --gold: #c9a54b; --dark: #2c2416; --light: #faf6ee; --card: #fff; --radius: 12px; --shadow: 0 4px 20px rgba(0,0,0,.08); }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -43,6 +44,7 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .guide-right .chat-input button { width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
 .btn-send { background: var(--gold); color: #fff; }
 .btn-mic { background: #eee; color: #555; }
+.btn-camera { background: #eee; color: #555; }
 .btn-mic.recording { background: #e53935; color: #fff; animation: pulse .8s infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(229,57,53,.4); } 50% { box-shadow: 0 0 0 12px rgba(229,57,53,0); } }
@@ -105,42 +107,48 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 #backTop.show { opacity: 1; pointer-events: auto; }
 #backTop:hover { background: var(--gold); }
 .empty-tip { text-align: center; padding: 30px; color: #aaa; font-size: .88rem; }
+/* Leaflet 路线地图 */
+#routeMap { min-height: 350px; }
+.poi-map-label { background: rgba(0,0,0,.75) !important; color: #fff !important; border: none !important; border-radius: 4px !important; padding: 3px 9px !important; font-size: 11px !important; font-weight: 600 !important; box-shadow: 0 2px 6px rgba(0,0,0,.25) !important; }
+.poi-map-label::before { border-top-color: rgba(0,0,0,.75) !important; }
+.leaflet-container { background: #f0f0f0 !important; }
 </style>
 </head>
 <body>
 
 <nav>
-  <span class="logo">🏯 灵山胜境</span>
-  <a class="active" data-page="home">首页</a>
-  <a data-page="guide">🤖 数字人导览</a>
-  <a data-page="pois">📍 景点导览</a>
-  <a data-page="route">🗺 智能路线</a>
-  <a data-page="about">景区介绍</a>
+  <span class="logo" data-i18n="logo">🏯 灵山胜境</span>
+  <a class="active" data-page="home" data-i18n="home">首页</a>
+  <a data-page="guide" data-i18n="guide">🤖 数字人导览</a>
+  <a data-page="pois" data-i18n="pois">📍 景点导览</a>
+  <a data-page="route" data-i18n="route">🗺 智能路线</a>
+  <a data-page="about" data-i18n="about">景区介绍</a>
   <div class="right">
+    <button id="langToggle" onclick="toggleLang()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:4px 10px;border-radius:14px;cursor:pointer;font-size:.78rem;margin-right:8px" title="Switch Language">🌐 EN</button>
     <span id="navStatus" class="status off" style="margin:0">○ 未连接</span>
   </div>
 </nav>
 
 <section class="page active" id="page-home">
   <div class="hero">
-    <h1>灵山胜境 · 拈花湾</h1>
-    <p>国家5A级旅游景区 | 世界佛教论坛永久会址 | 禅意生活体验</p>
+    <h1 data-i18n="hero_h1">灵山胜境 · 拈花湾</h1>
+    <p data-i18n="hero_p">国家5A级旅游景区 | 世界佛教论坛永久会址 | 禅意生活体验</p>
   </div>
-  <h3 style="margin-bottom:12px">📍 景区地图</h3>
+  <h3 style="margin-bottom:12px" data-i18n="map_title">📍 景区地图</h3>
   <iframe class="map-frame" src="https://uri.amap.com/marker?position=120.104,31.422&name=灵山胜境&callnative=0"></iframe>
   <div class="cards" style="margin-top:16px">
-    <div class="card"><h3>🕐 开放时间</h3><p>夏季 7:00-17:30<br>冬季 7:30-16:00<br>全年开放（特殊天气除外）</p></div>
-    <div class="card"><h3>🎫 门票信息</h3><p>成人票：210元<br>半价票：105元（学生/老人）<br>含灵山胜境+拈花湾联票</p></div>
-    <div class="card"><h3>🚗 交通指南</h3><p>无锡市滨湖区马山镇<br>公交88路/89路直达<br>太湖大道→环湖路→灵山景区</p></div>
+    <div class="card"><h3 data-i18n="open_title">🕐 开放时间</h3><p data-i18n="open_text">夏季 7:00-17:30<br>冬季 7:30-16:00<br>全年开放（特殊天气除外）</p></div>
+    <div class="card"><h3 data-i18n="ticket_title">🎫 门票信息</h3><p data-i18n="ticket_text">成人票：210元<br>半价票：105元（学生/老人）<br>含灵山胜境+拈花湾联票</p></div>
+    <div class="card"><h3 data-i18n="transport_title">🚗 交通指南</h3><p data-i18n="transport_text">无锡市滨湖区马山镇<br>公交88路/89路直达<br>太湖大道→环湖路→灵山景区</p></div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
     <div class="weather-card">
       <div style="font-size:2.4rem">⛅</div>
-      <div><div class="w-temp">28°</div><div class="w-info">无锡 · 多云转晴<br>体感舒适，适宜游玩<br>建议防晒，携带饮水</div></div>
+      <div><div class="w-temp">28°</div><div class="w-info" data-i18n="weather_label">无锡 · 多云转晴<br>体感舒适，适宜游玩<br>建议防晒，携带饮水</div></div>
     </div>
     <div class="card">
-      <h3 style="margin-bottom:12px">💡 今日游玩提示</h3>
-      <p style="font-size:.85rem;color:#666;line-height:1.8">
+      <h3 style="margin-bottom:12px" data-i18n="tips_title">💡 今日游玩提示</h3>
+      <p style="font-size:.85rem;color:#666;line-height:1.8" data-i18n="tips_text">
         • 九龙灌浴表演：每日 10:00 / 13:00 / 15:00<br>
         • 拈花湾夜游灯光秀：19:30 开始<br>
         • 灵山大佛登顶建议上午前往，避开人流<br>
@@ -148,7 +156,7 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
       </p>
     </div>
   </div>
-  <h3 style="margin:24px 0 12px">💬 常见问题 · 点击直接问数字人</h3>
+  <h3 style="margin:24px 0 12px" data-i18n="quick_title">💬 常见问题 · 点击直接问数字人</h3>
   <div class="quick-grid" id="quickGrid"></div>
 </section>
 
@@ -159,38 +167,61 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
       <audio id="audio" autoplay></audio>
       <div class="ctrl">
         <span id="statusBadge" class="status off">○ 未连接</span>
-        <button onclick="connectGuide()" style="background:var(--gold);color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:.8rem">连接数字人</button>
+        <button onclick="connectGuide()" style="background:var(--gold);color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:.8rem" data-i18n="connect_btn">连接数字人</button>
         <span style="color:#888;font-size:.75rem" id="sidLabel"></span>
       </div>
     </div>
     <div class="guide-right">
-      <div class="chat-header">💬 智能导览对话</div>
+      <div class="chat-header" data-i18n="chat_header">💬 智能导览对话</div>
       <div class="chat-msgs" id="chatMsgs">
-        <div class="msg ai">您好！点「连接数字人」后即可与我对话～</div>
+        <div class="msg ai" data-i18n="chat_welcome">您好！点「连接数字人」后即可与我对话～</div>
       </div>
       <div class="chat-quick">
-        <span class="chip" onclick="quickAsk('门票多少钱？')">🎫 门票</span>
-        <span class="chip" onclick="quickAsk('怎么去灵山胜境？')">🚗 交通</span>
-        <span class="chip" onclick="quickAsk('灵山大佛有多高？')">🏯 大佛</span>
-        <span class="chip" onclick="quickAsk('拈花湾有什么好玩的？')">🌸 拈花湾</span>
-        <span class="chip" onclick="quickAsk('九龙灌浴几点开始？')">⛲ 表演时间</span>
-        <span class="chip" onclick="quickAsk('推荐一条游览路线')">🗺 推荐路线</span>
+        <span class="chip" id="chip_ticket" onclick="quickAsk(LANG==='en'?'How much are tickets?':'门票多少钱？')" data-i18n="ticket_chip">🎫 门票</span>
+        <span class="chip" id="chip_transport" onclick="quickAsk(LANG==='en'?'How to get to Lingshan?':'怎么去灵山胜境？')" data-i18n="transport_chip">🚗 交通</span>
+        <span class="chip" id="chip_buddha" onclick="quickAsk(LANG==='en'?'How tall is the Grand Buddha?':'灵山大佛有多高？')" data-i18n="buddha_chip">🏯 大佛</span>
+        <span class="chip" id="chip_bay" onclick="quickAsk(LANG==='en'?'What to do at Nianhua Bay?':'拈花湾有什么好玩的？')" data-i18n="bay_chip">🌸 拈花湾</span>
+        <span class="chip" id="chip_show" onclick="quickAsk(LANG==='en'?'When does the Dragon Bathing show start?':'九龙灌浴几点开始？')" data-i18n="show_chip">⛲ 表演时间</span>
+        <span class="chip" id="chip_route" onclick="quickAsk(LANG==='en'?'Recommend a tour route':'推荐一条游览路线')" data-i18n="route_chip">🗺 推荐路线</span>
+        <span class="chip" id="chip_photo" onclick="openCamera()" style="background:#c9a54b;color:#fff;border-color:#b8973d" data-i18n="photo_chip">📷 拍照识景</span>
+      </div>
+      <!-- 拍照预览区 -->
+      <div id="imagePreview" style="display:none;padding:10px 12px;border-top:1px solid #eee;background:#faf8f3;">
+        <div style="position:relative;display:inline-block">
+          <img id="imagePreviewImg" src="" style="max-height:100px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1);" alt="拍照预览">
+          <button onclick="cancelImage()" style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:#e53935;color:#fff;border:none;cursor:pointer;font-size:.75rem;line-height:24px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.2);">✕</button>
+        </div>
+        <span style="font-size:.75rem;color:#888;margin-left:8px;vertical-align:bottom">点击发送或输入补充问题</span>
       </div>
       <div class="chat-input">
         <button class="btn-mic" id="micBtn" onclick="toggleMic()">🎤</button>
-        <input type="text" id="chatInput" placeholder="输入问题，按回车发送..." onkeydown="if(event.key==='Enter')sendText()">
+        <button class="btn-camera" id="camBtn" onclick="openCamera()" title="拍照识景">📷</button>
+        <input type="text" id="chatInput" data-i18n="send_placeholder" placeholder="输入问题，按回车发送..." onkeydown="if(event.key==='Enter')sendText()">
         <button class="btn-send" onclick="sendText()">➤</button>
       </div>
+      <!-- 评分栏 -->
+      <div id="ratingBar" style="display:none;padding:8px 14px;border-top:1px solid #eee;background:#faf8f3;text-align:center">
+        <span style="font-size:.78rem;color:#888;margin-right:8px" data-i18n="rating_label">评价本次服务：</span>
+        <span id="starRow" style="font-size:1.3rem;cursor:pointer;letter-spacing:2px;user-select:none">
+          <span onmouseover="hoverStar(1)" onmouseout="hoverStar(0)" onclick="submitRating(1)">☆</span>
+          <span onmouseover="hoverStar(2)" onmouseout="hoverStar(0)" onclick="submitRating(2)">☆</span>
+          <span onmouseover="hoverStar(3)" onmouseout="hoverStar(0)" onclick="submitRating(3)">☆</span>
+          <span onmouseover="hoverStar(4)" onmouseout="hoverStar(0)" onclick="submitRating(4)">☆</span>
+          <span onmouseover="hoverStar(5)" onmouseout="hoverStar(0)" onclick="submitRating(5)">☆</span>
+        </span>
+        <span id="ratingMsg" style="font-size:.73rem;color:#2d5a3f;margin-left:8px"></span>
+      </div>
+      <input type="file" id="imageFileInput" accept="image/*" capture="environment" style="display:none" onchange="handleImageFile(event)">
     </div>
   </div>
 </section>
 
 <section class="page" id="page-pois">
-  <h2 class="page-title">📍 景点导览</h2>
-  <p class="page-sub">点击任意景点，查看详细介绍并咨询 AI</p>
-  <div class="section-label"><span class="bar"></span>必看景点</div>
+  <h2 class="page-title" data-i18n="poi_title">📍 景点导览</h2>
+  <p class="page-sub" data-i18n="poi_sub">点击任意景点，查看详细介绍并咨询 AI</p>
+  <div class="section-label"><span class="bar"></span><span data-i18n="must_section">必看景点</span></div>
   <div class="cards" id="poiMust"></div>
-  <div class="section-label"><span class="bar"></span>更多景点</div>
+  <div class="section-label"><span class="bar"></span><span data-i18n="more_section">更多景点</span></div>
   <div class="cards" id="poiOther"></div>
 </section>
 
@@ -202,6 +233,12 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
   <div style="display:flex;gap:16px;flex-wrap:wrap">
     <div style="flex:1;min-width:280px">
       <div class="card" style="text-align:center;padding:30px">
+        <!-- 景区实景图片（有对应图片时显示，支持点击放大） -->
+        <div id="poi-detail-img-wrap" style="position:relative;margin-bottom:12px;cursor:pointer;display:none" onclick="openLightbox(this.querySelector('img').src)">
+          <img id="poi-detail-img" src="" alt="" style="width:100%;max-height:240px;object-fit:cover;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);transition:transform .3s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+          <div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;border-radius:20px;padding:4px 12px;font-size:.72rem;backdrop-filter:blur(4px);pointer-events:none">🔍 点击放大</div>
+        </div>
+        <!-- 无图片时的 emoji 兜底 -->
         <div style="font-size:5rem;margin-bottom:12px" id="poi-detail-emoji">🏯</div>
         <h3 id="poi-detail-name" style="font-size:1.4rem;margin-bottom:6px"></h3>
         <div id="poi-detail-tags" style="margin-bottom:12px"></div>
@@ -214,15 +251,15 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
     </div>
     <div style="flex:1;min-width:300px">
       <div class="card" style="height:100%;display:flex;flex-direction:column">
-        <h3>🤖 AI 智能讲解</h3>
-        <p style="color:#888;font-size:.82rem;margin-bottom:12px">向 AI 导游提问，了解更多细节</p>
+        <h3 data-i18n="ai_explain">🤖 AI 智能讲解</h3>
+        <p style="color:#888;font-size:.82rem;margin-bottom:12px" data-i18n="ai_subtitle">向 AI 导游提问，了解更多细节</p>
         <div class="chat-msgs" id="poi-chat-msgs" style="flex:1;min-height:200px;max-height:350px;overflow-y:auto;padding:8px;background:#faf8f3;border-radius:8px;margin-bottom:10px">
           <div class="msg ai" id="poi-chat-welcome">点击下方按钮，让我为你详细介绍这个景点～</div>
         </div>
         <div style="display:flex;gap:8px">
-          <button class="chip" onclick="poiQuickAsk('请详细介绍这个景点')" style="font-size:.8rem;padding:6px 12px;border-radius:14px;border:1px solid #e0d6bf;background:#fff;color:#6d5b3a;cursor:pointer">📖 详细介绍</button>
-          <button class="chip" onclick="poiQuickAsk('这里有什么历史典故吗')" style="font-size:.8rem;padding:6px 12px;border-radius:14px;border:1px solid #e0d6bf;background:#fff;color:#6d5b3a;cursor:pointer">📜 历史典故</button>
-          <button class="chip" onclick="poiQuickAsk('游览这个景点有什么注意事项')" style="font-size:.8rem;padding:6px 12px;border-radius:14px;border:1px solid #e0d6bf;background:#fff;color:#6d5b3a;cursor:pointer">💡 游览贴士</button>
+          <button class="chip" id="poiChip1" onclick="poiQuickAsk(LANG==='en'?'Tell me more about this spot':'请详细介绍这个景点')" data-i18n="detail_intro">📖 详细介绍</button>
+          <button class="chip" id="poiChip2" onclick="poiQuickAsk(LANG==='en'?'Any historical stories about this spot?':'这里有什么历史典故吗')" data-i18n="detail_history">📜 历史典故</button>
+          <button class="chip" id="poiChip3" onclick="poiQuickAsk(LANG==='en'?'Any tips for visiting this spot?':'游览这个景点有什么注意事项')" data-i18n="detail_tips">💡 游览贴士</button>
         </div>
       </div>
     </div>
@@ -230,8 +267,8 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 </section>
 
 <section class="page" id="page-route">
-  <h2 class="page-title">🗺 智能游览路线</h2>
-  <p class="page-sub">根据你的时间和偏好，AI 为你规划最佳路线</p>
+  <h2 class="page-title" data-i18n="route_title">🗺 智能游览路线</h2>
+  <p class="page-sub" data-i18n="route_sub">根据你的时间和偏好，AI 为你规划最佳路线</p>
   <div class="route-bar">
     <span class="lbl">⏰ 出发时间：</span>
     <select id="route-start" onchange="genRoute(getActiveHours(),null)" style="padding:7px 14px;border:1px solid #ddd;border-radius:18px;font-size:.85rem;margin-right:16px">
@@ -251,23 +288,196 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
     <button class="time-btn" onclick="genRoute(8,this)">深度（8小时）</button>
   </div>
   <div class="tl-summary" id="routeSummary"></div>
-  <div class="card" style="margin-bottom:16px">
+    <div class="card" style="margin-bottom:16px">
     <h3>🗺 路线地图</h3>
-    <div id="routeMap" style="height:300px;background:#e8f0e4;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#888;font-size:.9rem">
-      路线规划中...
-    </div>
+    <div id="routeMap" style="height:420px;background:#f0f0f0;border-radius:8px;overflow:hidden" data-init="0"></div>
   </div>
   <div class="timeline" id="routeTimeline"></div>
 </section>
 
 <section class="page" id="page-about">
-  <div class="hero" style="padding:40px 20px"><h1>关于灵山胜境</h1><p>太湖之滨 · 佛光普照 · 禅意生活</p></div>
+  <div class="hero" style="padding:40px 20px"><h1 data-i18n="about_title">关于灵山胜境</h1><p data-i18n="about_sub">太湖之滨 · 佛光普照 · 禅意生活</p></div>
   <div class="cards" id="aboutCards"></div>
 </section>
+
+<!-- 图片放大查看灯箱 -->
+<div id="lightbox" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.88);z-index:9999;justify-content:center;align-items:center;cursor:zoom-out;" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="景点大图" style="max-width:92%;max-height:92%;border-radius:10px;box-shadow:0 8px 48px rgba(0,0,0,.6);object-fit:contain;">
+  <span style="position:absolute;top:24px;right:32px;color:#fff;font-size:2.4rem;cursor:pointer;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);border-radius:50%;backdrop-filter:blur(4px);transition:.2s" onmouseover="this.style.background='rgba(0,0,0,.6)'" onmouseout="this.style.background='rgba(0,0,0,.3)'">✕</span>
+  <div style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.6);font-size:.8rem;background:rgba(0,0,0,.3);padding:6px 16px;border-radius:20px;backdrop-filter:blur(4px);pointer-events:none">点击任意位置关闭</div>
+</div>
 
 <button id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="返回顶部">↑</button>
 
 <script>
+// ======== i18n ========
+var LANG = localStorage.getItem('lang') || 'zh';
+var I18N = {
+  // Nav
+  'home': ['首页', 'Home'],
+  'guide': ['🤖 数字人导览', '🤖 AI Guide'],
+  'pois': ['📍 景点导览', '📍 Attractions'],
+  'route': ['🗺 智能路线', '🗺 Routes'],
+  'about': ['景区介绍', 'About'],
+  'logo': ['🏯 灵山胜境', '🏯 Lingshan'],
+  // Home
+  'hero_h1': ['灵山胜境 · 拈花湾', 'Lingshan · Nianhua Bay'],
+  'hero_p': ['国家5A级旅游景区 | 世界佛教论坛永久会址 | 禅意生活体验', 'National 5A Scenic Spot | World Buddhist Forum Site | Zen Experience'],
+  'map_title': ['📍 景区地图', '📍 Scenic Map'],
+  'open_title': ['🕐 开放时间', '🕐 Hours'],
+  'open_text': ['夏季 7:00-17:30<br>冬季 7:30-16:00<br>全年开放（特殊天气除外）', 'Summer 7:00-17:30<br>Winter 7:30-16:00<br>Open year-round'],
+  'ticket_title': ['🎫 门票信息', '🎫 Tickets'],
+  'ticket_text': ['成人票：210元<br>半价票：105元（学生/老人）<br>含灵山胜境+拈花湾联票', 'Adult: ¥210<br>Concession: ¥105 (student/senior)<br>Combo: Lingshan + Nianhua Bay'],
+  'transport_title': ['🚗 交通指南', '🚗 Transport'],
+  'transport_text': ['无锡市滨湖区马山镇<br>公交88路/89路直达<br>太湖大道→环湖路→灵山景区', 'Mashan Town, Binhu, Wuxi<br>Bus 88/89 direct<br>Taihu Blvd → Huanhu Rd'],
+  'weather_label': ['无锡 · 多云转晴<br>体感舒适，适宜游玩<br>建议防晒，携带饮水', 'Wuxi · Partly Cloudy<br>Comfortable for sightseeing<br>Bring sunscreen & water'],
+  'tips_title': ['💡 今日游玩提示', '💡 Tips for Today'],
+  'tips_text': ['• 九龙灌浴表演：每日 10:00 / 13:00 / 15:00<br>• 拈花湾夜游灯光秀：19:30 开始<br>• 灵山大佛登顶建议上午前往，避开人流<br>• 梵宫需套鞋套，建议穿便鞋', '• Dragon Bathing Show: 10:00 / 13:00 / 15:00<br>• Nianhua Bay Night Show: 19:30<br>• Visit Grand Buddha in the morning<br>• Shoe covers required in Brahma Palace'],
+  'quick_title': ['💬 常见问题 · 点击直接问数字人', '💬 FAQ · Click to ask the AI Guide'],
+  'quick_q':['常见问题','FAQ'],
+  // Guide
+  'chat_header': ['💬 智能导览对话', '💬 AI Guide Chat'],
+  'chat_welcome': ['您好！点「连接数字人」后即可与我对话～', 'Hello! Click "Connect" to start chatting with me~'],
+  'connect_btn': ['连接数字人', 'Connect Guide'],
+  'send_placeholder': ['输入问题，按回车发送...', 'Type your question, press Enter...'],
+  'photo_chip': ['📷 拍照识景', '📷 Photo'],
+  'ticket_chip': ['🎫 门票', '🎫 Tickets'],
+  'transport_chip': ['🚗 交通', '🚗 Transport'],
+  'buddha_chip': ['🏯 大佛', '🏯 Buddha'],
+  'bay_chip': ['🌸 拈花湾', '🌸 Bay'],
+  'show_chip': ['⛲ 表演时间', '⛲ Shows'],
+  'route_chip': ['🗺 推荐路线', '🗺 Route'],
+  'recording': ['🎤 录音中...', '🎤 Recording...'],
+  'thinking': ['思考中...', 'Thinking...'],
+  'sorry': ['抱歉，出了点问题...', 'Sorry, something went wrong...'],
+  'rating_label': ['评价本次服务：', 'Rate this service: '],
+  'rating_thanks': ['感谢评价！', 'Thanks for rating!'],
+  'photo_placeholder': ['描述你想了解的内容（可选），按回车发送...', 'Describe what you want to know (optional), press Enter...'],
+  // POI page
+  'poi_title': ['📍 景点导览', '📍 Attractions'],
+  'poi_sub': ['点击任意景点，查看详细介绍并咨询 AI', 'Click any spot to explore and ask AI'],
+  'must_section': ['必看景点', 'Must-See Spots'],
+  'more_section': ['更多景点', 'More Spots'],
+  'must_flag': ['必看', 'Must'],
+  'poi_ask': ['问数字人 →', 'Ask AI →'],
+  'poi_welcome': ['你好！我是灵山数字导游。关于「{name}」，有什么想了解的吗？', 'Hi! I\'m your Lingshan AI guide. What would you like to know about "{name}"?'],
+  'detail_intro': ['📖 详细介绍', '📖 Details'],
+  'detail_history': ['📜 历史典故', '📜 History'],
+  'detail_tips': ['💡 游览贴士', '💡 Tips'],
+  'ai_explain': ['🤖 AI 智能讲解', '🤖 AI Explainer'],
+  'ai_subtitle': ['向 AI 导游提问，了解更多细节', 'Ask the AI guide for more details'],
+  // Route
+  'route_title': ['🗺 智能游览路线', '🗺 Smart Route Planner'],
+  'route_sub': ['根据你的时间和偏好，AI 为你规划最佳路线', 'AI plans the best route based on your time & interests'],
+  'route_map_title': ['🗺 路线地图', '🗺 Route Map'],
+  // About
+  'about_title': ['关于灵山胜境', 'About Lingshan'],
+  'about_sub': ['太湖之滨 · 佛光普照 · 禅意生活', 'By Taihu Lake · Buddhist Sanctuary · Zen Living'],
+  'detail_view': ['点击查看详情 →', 'Click for details →'],
+  // --- POI translations ---
+  'poi_p1_name': ['灵山大佛', 'Grand Buddha'],
+  'poi_p1_desc': ['通高88米青铜佛像，世界最高铜佛像之一', '88m bronze Buddha, one of the tallest in the world'],
+  'poi_p2_name': ['梵宫', 'Brahma Palace'],
+  'poi_p2_desc': ['7.2万㎡佛教艺术殿堂，金碧辉煌', '72,000㎡ Buddhist art palace, magnificent'],
+  'poi_p3_name': ['五印坛城', 'Five Seals Mandala'],
+  'poi_p3_desc': ['藏传佛教风格建筑，唐卡壁画', 'Tibetan Buddhist architecture with Thangka murals'],
+  'poi_p4_name': ['九龙灌浴', 'Dragon Bathing Buddha'],
+  'poi_p4_desc': ['再现佛陀诞生场景，音乐喷泉表演', 'Buddha birth reenactment with musical fountain'],
+  'poi_p5_name': ['拈花湾', 'Nianhua Bay'],
+  'poi_p5_desc': ['禅意小镇，唐风宋韵，四季花海', 'Zen town, Tang-Song style, seasonal flower fields'],
+  'poi_p6_name': ['天下第一掌', 'The First Palm'],
+  'poi_p6_desc': ['高11.7米，大佛右手1:1复制品', '11.7m replica of the Grand Buddha\'s right hand'],
+  'poi_p7_name': ['曼飞龙塔', 'Manfeilong Pagoda'],
+  'poi_p7_desc': ['南传佛教风格塔群', 'Theravada Buddhist pagoda complex'],
+  'poi_p8_name': ['灵山博物馆', 'Lingshan Museum'],
+  'poi_p8_desc': ['佛教文物与历史陈列', 'Buddhist artifacts & history exhibition'],
+  'poi_p9_name': ['百子戏弥勒', 'Children Playing with Maitreya'],
+  'poi_p9_desc': ['弥勒与百童嬉戏雕塑群', 'Sculpture of Maitreya playing with children'],
+  'poi_p10_name': ['阿育王柱', 'Ashoka Pillar'],
+  'poi_p10_desc': ['纪念阿育王弘法的石柱', 'Pillar commemorating Emperor Ashoka'],
+  'poi_p11_name': ['灵山花海', 'Lingshan Flower Sea'],
+  'poi_p11_desc': ['大片花卉，拍照打卡胜地', 'Vast flower fields, photo paradise'],
+  'poi_p12_name': ['禅意小镇', 'Zen Town'],
+  'poi_p12_desc': ['禅修体验，慢生活街区', 'Meditation experience, slow-life district'],
+  // About data translations
+  'about_p1_desc': ['通高88米，青铜铸造，世界最高铜佛像之一。右手施无畏印，左手施与愿印，俯瞰太湖。佛像内部有电梯可达佛脚平台，俯瞰太湖美景。', '88m bronze statue, one of the tallest in the world. Right hand in abhaya mudra, left in varada mudra. Elevator to foot platform with lake views.'],
+  'about_p2_desc': ['建筑面积7.2万平方米，造价18亿。金碧辉煌的佛教艺术殿堂，融合传统工艺与现代建筑。内部珍宝馆藏有大量佛教文物。', '72,000㎡ built at ¥1.8B. A magnificent Buddhist art palace blending traditional crafts with modern architecture.'],
+  'about_p3_desc': ['禅意小镇，唐风宋韵。梵天花海3万平方米，四季花海。夜游灯光秀、禅修体验、特色民宿，建议傍晚前往。', 'Zen town in Tang-Song style. 30,000㎡ flower fields blooming year-round. Night light shows, meditation, boutique stays.'],
+  'about_p4_desc': ['再现佛陀诞生场景，九龙喷水沐浴太子佛。动态音乐喷泉表演，每天10:00、13:00、15:00上演，建议提前到场。', 'Reenacts Buddha\'s birth with nine dragons bathing the prince. Musical fountain shows at 10:00, 13:00, 15:00 daily.'],
+  'about_p5_desc': ['高11.7米，宽5.5米，灵山大佛右手1:1复制品。摸掌祈福，沾福气保平安，游客必打卡点。', '11.7m tall, 1:1 replica of the Grand Buddha\'s right hand. Touch for blessings - a must-visit photo spot.'],
+  'about_p6_desc': ['藏传佛教风格建筑，展示藏传佛教艺术。坛城金顶、转经筒、唐卡壁画，感受雪域文化魅力。', 'Tibetan Buddhist style with golden dome, prayer wheels, and Thangka murals. Experience Himalayan culture.'],
+};
+
+function t(key) {
+  var entry = I18N[key];
+  if (!entry) return key;
+  return LANG === 'en' ? (entry[1] || entry[0]) : entry[0];
+}
+
+function toggleLang() {
+  LANG = LANG === 'zh' ? 'en' : 'zh';
+  localStorage.setItem('lang', LANG);
+  applyLang();
+}
+
+function applyLang() {
+  // Toggle button
+  var btn = document.getElementById('langToggle');
+  if (btn) btn.textContent = LANG === 'zh' ? '🌐 EN' : '🌐 中文';
+
+  // data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n');
+    var translated = t(key);
+    if (el.tagName === 'INPUT') el.placeholder = translated;
+    else el.innerHTML = translated;
+  });
+
+  // Re-render dynamic content
+  renderPois();
+  renderAbout();
+  renderQuickGrid();
+  if (_curPoi) showPoiDetail(_curPoi.name);
+  if (document.getElementById('page-route').classList.contains('active')) genRoute(getActiveHours(), null);
+
+  // Update hero text
+  var heroH1 = document.querySelector('.hero h1');
+  if (heroH1) heroH1.textContent = t('hero_h1');
+  var heroP = document.querySelector('.hero p');
+  if (heroP) heroP.textContent = t('hero_p');
+
+  // Update chat welcome
+  var chatMsgs = document.getElementById('chatMsgs');
+  if (chatMsgs && chatMsgs.children.length === 1 && chatMsgs.children[0].classList.contains('ai')) {
+    chatMsgs.children[0].textContent = t('chat_welcome');
+  }
+
+  // Update page titles
+  var pt = document.querySelector('#page-pois .page-title');
+  if (pt) pt.textContent = t('poi_title');
+  var ps = document.querySelector('#page-pois .page-sub');
+  if (ps) ps.textContent = t('poi_sub');
+  var rt = document.querySelector('#page-route .page-title');
+  if (rt) rt.textContent = t('route_title');
+  var rs = document.querySelector('#page-route .page-sub');
+  if (rs) rs.textContent = t('route_sub');
+}
+
+function renderQuickGrid() {
+  var QUICK_I18N = [
+    { q_zh: '门票多少钱？有哪些票种？', q_en: 'How much are tickets? What types?', icon: '🎫' },
+    { q_zh: '怎么去灵山胜境？有停车场吗？', q_en: 'How to get to Lingshan? Is there parking?', icon: '🚗' },
+    { q_zh: '灵山大佛有多高？可以登顶吗？', q_en: 'How tall is the Grand Buddha?', icon: '🏯' },
+    { q_zh: '拈花湾有什么好玩的？夜游几点？', q_en: 'What to do at Nianhua Bay? Night show time?', icon: '🌸' },
+    { q_zh: '九龙灌浴表演几点开始？', q_en: 'When does the Dragon Bathing show start?', icon: '⛲' },
+    { q_zh: '推荐一条半天的游览路线', q_en: 'Recommend a half-day tour route', icon: '🗺️' }
+  ];
+  var label = LANG === 'zh' ? '常见问题' : 'FAQ';
+  document.getElementById('quickGrid').innerHTML = QUICK_I18N.map(function(q) {
+    var qText = LANG === 'zh' ? q.q_zh : q.q_en;
+    return '<div class="quick-card" onclick="quickAsk(\'' + qText + '\')"><div class="qq">' + q.icon + ' ' + label + '</div><div class="qa">' + qText + '</div></div>';
+  }).join('');
+}
 // ======== PAGE SWITCH ========
 document.querySelectorAll('nav a[data-page]').forEach(a => a.onclick = () => switchPage(a.dataset.page, a));
 function switchPage(name, btn) {
@@ -277,16 +487,25 @@ function switchPage(name, btn) {
   if (el) el.classList.add('active');
   if (btn) btn.classList.add('active');
   if (name === 'guide' && !sessionid && pcGuide) { setGuideStatus(true, sessionid); }
+  // 切换到路线页时重新绘制地图（处理容器从隐藏到可见的尺寸变化）
+  if (name === 'route' && window._currentSpots && window._currentSpots.length) {
+    setTimeout(function() {
+      if (leafletMap) leafletMap.invalidateSize();
+      drawRouteOnMap(window._currentSpots);
+    }, 200);
+  }
 }
 
 // ======== WebRTC — verified working from guide2 — ========
 var pcGuide = null, sessionid = null;
 
 function setGuideStatus(on, sid) {
+  var connectedText = LANG === 'zh' ? '● 已连接' : '● Connected';
+  var disconnectedText = LANG === 'zh' ? '○ 未连接' : '○ Disconnected';
   var b = document.getElementById('statusBadge');
-  if (b) { b.className = 'status ' + (on ? 'on' : 'off'); b.textContent = on ? '● 已连接' : '○ 未连接'; }
+  if (b) { b.className = 'status ' + (on ? 'on' : 'off'); b.textContent = on ? connectedText : disconnectedText; }
   var n = document.getElementById('navStatus');
-  if (n) { n.className = 'status ' + (on ? 'on' : 'off'); n.textContent = on ? '● 已连接' : '○ 未连接'; }
+  if (n) { n.className = 'status ' + (on ? 'on' : 'off'); n.textContent = on ? connectedText : disconnectedText; }
   var l = document.getElementById('sidLabel');
   if (l && sid) l.textContent = 'SID:' + sid.slice(0, 8) + '...';
 }
@@ -322,23 +541,116 @@ function connectGuide() {
 }
 window.addEventListener('beforeunload', () => { if (pcGuide) { pcGuide.close(); pcGuide = null; } });
 
+// ======== CAMERA ========
+var pendingImage = null;  // { base64: "data:image/jpeg;base64,...", name: "photo.jpg" }
+
+function openCamera() {
+  document.getElementById('imageFileInput').click();
+}
+
+function handleImageFile(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  compressImage(file, 800, function(dataUrl) {
+    pendingImage = dataUrl;
+    document.getElementById('imagePreviewImg').src = dataUrl;
+    document.getElementById('imagePreview').style.display = 'block';
+    document.getElementById('chatInput').placeholder = t('photo_placeholder');
+    document.getElementById('chatInput').focus();
+    // 聊天消息区自动滚动到底部
+    var msgs = document.getElementById('chatMsgs');
+    msgs.scrollTop = msgs.scrollHeight;
+  });
+  event.target.value = '';
+}
+
+function compressImage(file, maxWidth, callback) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', 0.8));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function cancelImage() {
+  pendingImage = null;
+  document.getElementById('imagePreview').style.display = 'none';
+  document.getElementById('imagePreviewImg').src = '';
+  document.getElementById('chatInput').placeholder = t('send_placeholder');
+}
+
 // ======== CHAT ========
 var typingEl = null;
-function addMsg(role, text) { var m = document.createElement('div'); m.className = 'msg ' + (role === 'ai' ? 'ai' : 'user'); m.textContent = text; var c = document.getElementById('chatMsgs'); c.appendChild(m); c.scrollTop = c.scrollHeight; }
-function addTyping() { typingEl = document.createElement('div'); typingEl.className = 'typing'; typingEl.textContent = '思考中...'; document.getElementById('chatMsgs').appendChild(typingEl); typingEl.scrollIntoView({ behavior: 'smooth' }); }
+function addMsg(role, text, imgSrc) {
+  var m = document.createElement('div');
+  m.className = 'msg ' + (role === 'ai' ? 'ai' : 'user');
+  var html = '';
+  if (imgSrc) html += '<img src="' + imgSrc.replace(/"/g,'&quot;') + '" style="max-width:180px;max-height:120px;border-radius:8px;display:block;margin-bottom:6px;">';
+  html += text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  m.innerHTML = html;
+  var c = document.getElementById('chatMsgs');
+  c.appendChild(m);
+  c.scrollTop = c.scrollHeight;
+}
+function addTyping() { typingEl = document.createElement('div'); typingEl.className = 'typing'; typingEl.textContent = t('thinking'); document.getElementById('chatMsgs').appendChild(typingEl); typingEl.scrollIntoView({ behavior: 'smooth' }); }
 function removeTyping() { if (typingEl) { typingEl.remove(); typingEl = null; } }
 function sendText() {
   var t = document.getElementById('chatInput').value.trim();
-  if (!t) return;
+  var img = pendingImage;
+  if (!t && !img) return;
   if (!sessionid) { sessionid = 'web_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
-  addMsg('user', t);
+  var display = t || (LANG === 'zh' ? '📷 拍照识景' : '📷 Photo Recognition');
+  addMsg('user', display, img);
   document.getElementById('chatInput').value = '';
+  cancelImage();
   addTyping();
-  fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: t, sessionid: sessionid }) })
-    .then(r => r.json()).then(d => { removeTyping(); addMsg('ai', d.reply); })
-    .catch(() => { removeTyping(); addMsg('ai', '抱歉，出了点问题...'); });
+  var body = { text: t || '请识别并介绍这张照片', sessionid: sessionid };
+  if (img) body.image_base64 = img;
+  fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    .then(function(r) { return r.json(); }).then(function(d) { removeTyping(); addMsg('ai', d.reply); showRatingBar(); })
+    .catch(function() { removeTyping(); addMsg('ai', t('sorry')); });
 }
 function quickAsk(text) { switchPage('guide', document.querySelector('nav a[data-page="guide"]')); document.getElementById('chatInput').value = text; sendText(); }
+
+// ======== STAR RATING ========
+var _ratedSession = null;  // 记录已评价的 session
+function showRatingBar() {
+  if (!sessionid || sessionid === _ratedSession) return;
+  document.getElementById('ratingBar').style.display = 'block';
+}
+function hoverStar(n) {
+  var stars = document.querySelectorAll('#starRow span');
+  stars.forEach(function(s, i) { s.textContent = i < n ? '★' : '☆'; });
+}
+function submitRating(rating) {
+  if (!sessionid) return;
+  var stars = document.querySelectorAll('#starRow span');
+  stars.forEach(function(s, i) { s.textContent = i < rating ? '★' : '☆'; });
+  _ratedSession = sessionid;
+  document.getElementById('ratingMsg').textContent = t('rating_thanks');
+  // 提交到后端
+  fetch('/api/report/rating', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session_id: sessionid, rating: rating, comment: '' })
+  }).catch(function() {});
+  // 3 秒后收起评分栏
+  setTimeout(function() {
+    document.getElementById('ratingBar').style.display = 'none';
+    document.getElementById('ratingMsg').textContent = '';
+    stars.forEach(function(s) { s.textContent = '☆'; });
+  }, 3000);
+}
 
 // ======== ASR ========
 var mediaRecorder = null, audioChunks = [];
@@ -359,7 +671,7 @@ function toggleMic() {
         removeTyping();
         if (d.text) { addMsg('user', '🎤 ' + d.text); addTyping();
           fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: d.text, sessionid: sessionid }) })
-            .then(r2 => r2.json()).then(d2 => { removeTyping(); addMsg('ai', d2.reply); }).catch(() => removeTyping());
+            .then(r2 => r2.json()).then(d2 => { removeTyping(); addMsg('ai', d2.reply); showRatingBar(); }).catch(() => removeTyping());
         }
       }).catch(() => removeTyping());
     };
@@ -381,41 +693,75 @@ function audioBufferToWav(buf) {
 
 // ======== POI ========
 var POIS = [
-  { id: 'p1', name: '灵山大佛', emoji: '🏯', tags: ['佛教文化', '历史', '建筑'], dwell: 40, must: true, desc: '通高88米青铜佛像，世界最高铜佛像之一' },
-  { id: 'p2', name: '梵宫', emoji: '🏛', tags: ['建筑', '佛教文化', '艺术'], dwell: 50, must: true, desc: '7.2万㎡佛教艺术殿堂，金碧辉煌' },
-  { id: 'p3', name: '五印坛城', emoji: '🏯', tags: ['建筑', '佛教文化', '历史'], dwell: 30, must: false, desc: '藏传佛教风格建筑，唐卡壁画' },
-  { id: 'p4', name: '九龙灌浴', emoji: '⛲', tags: ['佛教文化', '表演'], dwell: 25, must: true, desc: '再现佛陀诞生场景，音乐喷泉表演' },
-  { id: 'p5', name: '拈花湾', emoji: '🌸', tags: ['自然风光', '禅意', '休闲', '夜景'], dwell: 90, must: true, desc: '禅意小镇，唐风宋韵，四季花海' },
-  { id: 'p6', name: '天下第一掌', emoji: '🖐', tags: ['佛教文化', '建筑'], dwell: 15, must: false, desc: '高11.7米，大佛右手1:1复制品' },
-  { id: 'p7', name: '曼飞龙塔', emoji: '🏛', tags: ['建筑', '佛教文化'], dwell: 20, must: false, desc: '南传佛教风格塔群' },
-  { id: 'p8', name: '灵山博物馆', emoji: '🏺', tags: ['历史', '文化', '艺术'], dwell: 30, must: false, desc: '佛教文物与历史陈列' },
-  { id: 'p9', name: '百子戏弥勒', emoji: '😊', tags: ['佛教文化', '雕塑'], dwell: 15, must: false, desc: '弥勒与百童嬉戏雕塑群' },
-  { id: 'p10', name: '阿育王柱', emoji: '🗼', tags: ['历史', '佛教文化', '建筑'], dwell: 15, must: false, desc: '纪念阿育王弘法的石柱' },
-  { id: 'p11', name: '灵山花海', emoji: '🌷', tags: ['自然风光', '休闲', '拍照'], dwell: 30, must: false, desc: '大片花卉，拍照打卡胜地' },
-  { id: 'p12', name: '禅意小镇', emoji: '🏮', tags: ['休闲', '禅意', '自然风光'], dwell: 45, must: false, desc: '禅修体验，慢生活街区' }
+  { id: 'p1', name: '灵山大佛', emoji: '🏯', tags: ['佛教文化', '历史', '建筑'], dwell: 40, must: true, desc: '通高88米青铜佛像，世界最高铜佛像之一', lng: 120.0964, lat: 31.4303 },
+  { id: 'p2', name: '梵宫', emoji: '🏛', tags: ['建筑', '佛教文化', '艺术'], dwell: 50, must: true, desc: '7.2万㎡佛教艺术殿堂，金碧辉煌', lng: 120.1024, lat: 31.4289 },
+  { id: 'p3', name: '五印坛城', emoji: '🏯', tags: ['建筑', '佛教文化', '历史'], dwell: 30, must: false, desc: '藏传佛教风格建筑，唐卡壁画', lng: 120.1030, lat: 31.4248 },
+  { id: 'p4', name: '九龙灌浴', emoji: '⛲', tags: ['佛教文化', '表演'], dwell: 25, must: true, desc: '再现佛陀诞生场景，音乐喷泉表演', lng: 120.1001, lat: 31.4248 },
+  { id: 'p5', name: '拈花湾', emoji: '🌸', tags: ['自然风光', '禅意', '休闲', '夜景'], dwell: 90, must: true, desc: '禅意小镇，唐风宋韵，四季花海', lng: 120.0765, lat: 31.4193 },
+  { id: 'p6', name: '天下第一掌', emoji: '🖐', tags: ['佛教文化', '建筑'], dwell: 15, must: false, desc: '高11.7米，大佛右手1:1复制品', lng: 120.0970, lat: 31.4295 },
+  { id: 'p7', name: '曼飞龙塔', emoji: '🏛', tags: ['建筑', '佛教文化'], dwell: 20, must: false, desc: '南传佛教风格塔群', lng: 120.0990, lat: 31.4300 },
+  { id: 'p8', name: '灵山博物馆', emoji: '🏺', tags: ['历史', '文化', '艺术'], dwell: 30, must: false, desc: '佛教文物与历史陈列', lng: 120.1000, lat: 31.4230 },
+  { id: 'p9', name: '百子戏弥勒', emoji: '😊', tags: ['佛教文化', '雕塑'], dwell: 15, must: false, desc: '弥勒与百童嬉戏雕塑群', lng: 120.1020, lat: 31.4265 },
+  { id: 'p10', name: '阿育王柱', emoji: '🗼', tags: ['历史', '佛教文化', '建筑'], dwell: 15, must: false, desc: '纪念阿育王弘法的石柱', lng: 120.1030, lat: 31.4280 },
+  { id: 'p11', name: '灵山花海', emoji: '🌷', tags: ['自然风光', '休闲', '拍照'], dwell: 30, must: false, desc: '大片花卉，拍照打卡胜地', lng: 120.1030, lat: 31.4220 },
+  { id: 'p12', name: '禅意小镇', emoji: '🏮', tags: ['休闲', '禅意', '自然风光'], dwell: 45, must: false, desc: '禅修体验，慢生活街区', lng: 120.0775, lat: 31.4180 }
 ];
 function thumbClass(t) { var x = t[0]; return x === '佛教文化' ? 'thumb-buddha' : x === '建筑' ? 'thumb-build' : x === '自然风光' ? 'thumb-nature' : (x === '艺术' || x === '文化') ? 'thumb-art' : x === '表演' ? 'thumb-show' : 'thumb-default'; }
+function poiName(p) { return t('poi_'+p.id+'_name') || p.name; }
+function poiDesc(p) { return t('poi_'+p.id+'_desc') || p.desc; }
 function renderPois() {
   var card = function(p) {
-    return '<div class="poi-card" onclick="askAbout(\'' + p.name + '\')"><div class="poi-thumb ' + thumbClass(p.tags) + '">' + p.emoji + (p.must ? '<span class="must-flag">必看</span>' : '') + '</div><div class="poi-body"><div class="name">' + p.name + '</div><div class="poi-tags">' + p.tags.map(function(t) { return '<span class="t">' + t + '</span>'; }).join('') + '</div><div class="poi-meta"><span>⏱ 约' + p.dwell + '分钟</span><span class="ask">问数字人 →</span></div></div></div>';
+    var name = poiName(p);
+    return '<div class="poi-card" onclick="askAbout(\'' + name + '\')"><div class="poi-thumb ' + thumbClass(p.tags) + '">' + p.emoji + (p.must ? '<span class="must-flag" data-i18n="must_flag">' + t('must_flag') + '</span>' : '') + '</div><div class="poi-body"><div class="name">' + name + '</div><div class="poi-tags">' + p.tags.map(function(t) { return '<span class="t">' + t + '</span>'; }).join('') + '</div><div class="poi-meta"><span>⏱ ~' + p.dwell + 'min</span><span class="ask">' + t('poi_ask') + '</span></div></div></div>';
   };
   document.getElementById('poiMust').innerHTML = POIS.filter(function(p) { return p.must; }).map(card).join('');
   document.getElementById('poiOther').innerHTML = POIS.filter(function(p) { return !p.must; }).map(card).join('');
 }
+// ======== 景区图片 ========
+var SCENIC_IMG_NAMES = ['灵山大佛','灵山梵宫','拈花湾','九龙灌浴','天下第一掌','五印坛城'];
+function getScenicImgUrl(name) { return '/scenic_images/' + encodeURIComponent(name) + '.webp'; }
+function setPoiImage(name) {
+  var wrap = document.getElementById('poi-detail-img-wrap');
+  var img = document.getElementById('poi-detail-img');
+  var emoji = document.getElementById('poi-detail-emoji');
+  if (SCENIC_IMG_NAMES.indexOf(name) >= 0) {
+    img.src = getScenicImgUrl(name);
+    img.alt = name + '实景';
+    wrap.style.display = 'block';
+    emoji.style.display = 'none';
+  } else {
+    wrap.style.display = 'none';
+    emoji.style.display = 'block';
+  }
+}
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.body.style.overflow = '';
+}
+// ESC 键关闭灯箱
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLightbox(); });
+
 // ======== POI DETAIL ========
 var _curPoi = null;
 function showPoiDetail(name) {
-  var p = POIS.find(function(x) { return x.name === name; });
+  var p = POIS.find(function(x) { return x.name === name || poiName(x) === name; });
   if (!p) return;
   _curPoi = p;
-  document.getElementById('poi-detail-title').textContent = p.name;
+  var displayName = poiName(p);
+  setPoiImage(p.name);
+  document.getElementById('poi-detail-title').textContent = displayName;
   document.getElementById('poi-detail-emoji').textContent = p.emoji;
-  document.getElementById('poi-detail-name').textContent = p.name;
-  document.getElementById('poi-detail-desc').textContent = p.desc;
-  document.getElementById('poi-detail-dwell').textContent = '约' + p.dwell + '分钟';
+  document.getElementById('poi-detail-name').textContent = displayName;
+  document.getElementById('poi-detail-desc').textContent = poiDesc(p);
+  document.getElementById('poi-detail-dwell').textContent = '~' + p.dwell + 'min';
   document.getElementById('poi-detail-tags').innerHTML = p.tags.map(function(t) { return '<span class="t">' + t + '</span>'; }).join('');
-  document.getElementById('poi-detail-rank').textContent = p.must ? '#必看' : '#推荐';
-  document.getElementById('poi-chat-msgs').innerHTML = '<div class="msg ai">👋 你好！我是灵山数字导游。关于「' + p.name + '」，有什么想了解的吗？</div>';
+  document.getElementById('poi-detail-rank').textContent = p.must ? '#Must' : '#Recommended';
+  document.getElementById('poi-chat-msgs').innerHTML = '<div class="msg ai">👋 ' + t('poi_welcome').replace('{name}', displayName) + '</div>';
   switchPage('poi-detail', null);
 }
 function poiQuickAsk(question) {
@@ -436,15 +782,10 @@ function poiQuickAsk(question) {
       msgs.innerHTML += '<div class="msg ai">抱歉，出了点问题...</div>';
     });
 }
-function askAbout(name) { switchPage('guide', document.querySelector('nav a[data-page="guide"]')); document.getElementById('chatInput').value = '请介绍一下' + name; document.getElementById('chatInput').focus(); }
+function askAbout(name) { switchPage('guide', document.querySelector('nav a[data-page="guide"]')); var prefix = LANG === 'zh' ? '请介绍一下' : 'Tell me about '; document.getElementById('chatInput').value = prefix + name; document.getElementById('chatInput').focus(); }
 
 // ======== QUICK ========
-var QUICK = [
-  { q: '门票多少钱？有哪些票种？', icon: '🎫' }, { q: '怎么去灵山胜境？有停车场吗？', icon: '🚗' },
-  { q: '灵山大佛有多高？可以登顶吗？', icon: '🏯' }, { q: '拈花湾有什么好玩的？夜游几点？', icon: '🌸' },
-  { q: '九龙灌浴表演几点开始？', icon: '⛲' }, { q: '推荐一条半天的游览路线', icon: '🗺️' }
-];
-document.getElementById('quickGrid').innerHTML = QUICK.map(function(q) { return '<div class="quick-card" onclick="quickAsk(\'' + q.q + '\')"><div class="qq">' + q.icon + ' 常见问题</div><div class="qa">' + q.q + '</div></div>'; }).join('');
+// ponytail: renderQuickGrid defined in i18n section above
 
 // ======== ROUTE ========
 function getActiveHours() {
@@ -486,19 +827,17 @@ function genRoute(hours, btn) {
     '<div class="item">🎯 偏好 <b>'+interest+'</b></div>';
 
   // 路线地图
+  window._currentSpots = sel;
+
   if (!sel.length) {
-    document.getElementById('routeMap').innerHTML = '<span>时间太短，至少2小时～</span>';
+    if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+    document.getElementById('routeMap').innerHTML = '<div style="height:420px;display:flex;align-items:center;justify-content:center;color:#888;font-size:.9rem">时间太短，至少2小时～</div>';
     document.getElementById('routeTimeline').innerHTML = '';
   } else {
-    document.getElementById('routeMap').innerHTML =
-      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:16px;justify-content:center">'+
-      sel.map(function(p,i) {
-        var color = ['#c9a54b','#6d5b3a','#5a4030','#8a6d4a','#4a6d5a','#7a4a5a','#3a4a6d','#5a7a9a','#c97a5a','#7a8a4a','#9a5a7a','#4a8a8a'][i%12];
-        return '<div style="text-align:center;padding:8px"><div style="width:44px;height:44px;border-radius:50%;background:'+color+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin:0 auto 4px">'+p.emoji+'</div><div style="font-size:.7rem;color:#555;max-width:60px;line-height:1.3">'+p.name+'</div></div>'+
-        (i<sel.length-1?'<div style="font-size:1.2rem;color:#ccc">→</div>':'');
-      }).join('')+
-      '</div>';
-
+    // 不清理 DOM（Leaflet 自己管理），直接绘制
+    if (document.getElementById('page-route').classList.contains('active')) {
+      drawRouteOnMap(sel);
+    }
     // 时间线
     var acc = 0;
     document.getElementById('routeTimeline').innerHTML = sel.map(function(p, i) {
@@ -506,8 +845,87 @@ function genRoute(hours, btn) {
       var realStart = startHour * 60 + start;
       var realEnd = realStart + p.dwell;
       var fmt = function(m) { return String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); };
-      return '<div class="tl-item"><div class="tl-dot">'+(i+1)+'</div><div class="tl-body"><div class="tl-name">'+p.emoji+' '+p.name+' '+(p.must?'<span style="font-size:.7rem;color:#b71c1c">必看</span>':'')+'</div><div class="tl-info">⏱ '+fmt(realStart)+'–'+fmt(realEnd)+' · 停留'+p.dwell+'分钟 · '+p.desc+'</div></div></div>';
+      var name = poiName(p), desc = poiDesc(p);
+      return '<div class="tl-item"><div class="tl-dot">'+(i+1)+'</div><div class="tl-body"><div class="tl-name">'+p.emoji+' '+name+' '+(p.must?'<span style="font-size:.7rem;color:#b71c1c">'+t('must_flag')+'</span>':'')+'</div><div class="tl-info">⏱ '+fmt(realStart)+'–'+fmt(realEnd)+' · ~'+p.dwell+'min · '+desc+'</div></div></div>';
     }).join('');
+  }
+}
+
+// ======== Leaflet 路线地图 ========
+var leafletMap = null;
+var leafletMarkers = [];
+var leafletPolyline = null;
+
+function initLeafletMap() {
+  if (leafletMap) return;
+  var rm = document.getElementById('routeMap');
+  if (!rm) return;
+  leafletMap = L.map('routeMap', {
+    center: [31.425, 120.100],
+    zoom: 15,
+    attributionControl: false,
+    zoomControl: true,
+  });
+  // 高德瓦片（无需 API key，风格贴近原版高德地图）
+  L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+    subdomains: ['1','2','3','4'],
+    maxZoom: 18,
+  }).addTo(leafletMap);
+}
+
+function drawRouteOnMap(spots) {
+  initLeafletMap();
+  if (!leafletMap) return;
+
+  // 清除旧数据
+  leafletMarkers.forEach(function(m) { leafletMap.removeLayer(m); });
+  leafletMarkers = [];
+  if (leafletPolyline) { leafletMap.removeLayer(leafletPolyline); leafletPolyline = null; }
+
+  var path = [];
+  var colors = ['#e85d3a','#4a90d9','#48a848','#e08030','#9040c0',
+                '#d44040','#3a7abf','#2ea82e','#cc7020','#7a30b0'];
+
+  spots.forEach(function(p, i) {
+    if (p.lng === undefined || p.lat === undefined) return;
+    var latlng = [p.lat, p.lng];
+    path.push(latlng);
+
+    var color = colors[i % colors.length];
+    var icon = L.divIcon({
+      html: '<div style="background:'+color+';color:#fff;width:30px;height:30px;border-radius:50%;text-align:center;line-height:30px;font-weight:bold;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.4);border:2px solid #fff">'+(i+1)+'</div>',
+      className: '',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+    });
+
+    var marker = L.marker(latlng, { icon: icon }).addTo(leafletMap);
+
+    // 景点名称标签（常显）
+    marker.bindTooltip(p.name, {
+      permanent: true,
+      direction: 'top',
+      offset: [0, -20],
+      className: 'poi-map-label',
+    });
+
+    leafletMarkers.push(marker);
+  });
+
+  // 醒目的折线路径
+  if (path.length > 1) {
+    leafletPolyline = L.polyline(path, {
+      color: '#e85d3a',
+      weight: 5,
+      opacity: 0.85,
+      lineJoin: 'round',
+      lineCap: 'round',
+    }).addTo(leafletMap);
+  }
+
+  // 自适应视野
+  if (path.length) {
+    leafletMap.fitBounds(path, { padding: [50, 50], maxZoom: 16 });
   }
 }
 
@@ -516,38 +934,45 @@ window.addEventListener('scroll', function() { var b = document.getElementById('
 
 // ======== ABOUT ========
 var ABOUT = [
-  {name:'灵山大佛',emoji:'🏯',tags:['佛教文化','建筑','历史'],dwell:40,must:true,desc:'通高88米，青铜铸造，世界最高铜佛像之一。右手施无畏印，左手施与愿印，俯瞰太湖。佛像内部有电梯可达佛脚平台，俯瞰太湖美景。'},
-  {name:'灵山梵宫',emoji:'🏛',tags:['建筑','佛教文化','艺术'],dwell:50,must:true,desc:'建筑面积7.2万平方米，造价18亿。金碧辉煌的佛教艺术殿堂，融合传统工艺与现代建筑。内部珍宝馆藏有大量佛教文物。'},
-  {name:'拈花湾',emoji:'🌸',tags:['自然风光','禅意','休闲','夜景'],dwell:90,must:true,desc:'禅意小镇，唐风宋韵。梵天花海3万平方米，四季花海。夜游灯光秀、禅修体验、特色民宿，建议傍晚前往。'},
-  {name:'九龙灌浴',emoji:'⛲',tags:['佛教文化','表演'],dwell:25,must:true,desc:'再现佛陀诞生场景，九龙喷水沐浴太子佛。动态音乐喷泉表演，每天10:00、13:00、15:00上演，建议提前到场。'},
-  {name:'天下第一掌',emoji:'🖐',tags:['佛教文化','建筑'],dwell:15,must:false,desc:'高11.7米，宽5.5米，灵山大佛右手1:1复制品。摸掌祈福，沾福气保平安，游客必打卡点。'},
-  {name:'五印坛城',emoji:'🏯',tags:['建筑','佛教文化','历史'],dwell:30,must:false,desc:'藏传佛教风格建筑，展示藏传佛教艺术。坛城金顶、转经筒、唐卡壁画，感受雪域文化魅力。'},
+  {name:'灵山大佛',emoji:'🏯',tags:['佛教文化','建筑','历史'],dwell:40,must:true,desc:'通高88米，青铜铸造，世界最高铜佛像之一。右手施无畏印，左手施与愿印，俯瞰太湖。佛像内部有电梯可达佛脚平台，俯瞰太湖美景。',lng:120.0964,lat:31.4303},
+  {name:'灵山梵宫',emoji:'🏛',tags:['建筑','佛教文化','艺术'],dwell:50,must:true,desc:'建筑面积7.2万平方米，造价18亿。金碧辉煌的佛教艺术殿堂，融合传统工艺与现代建筑。内部珍宝馆藏有大量佛教文物。',lng:120.1024,lat:31.4289},
+  {name:'拈花湾',emoji:'🌸',tags:['自然风光','禅意','休闲','夜景'],dwell:90,must:true,desc:'禅意小镇，唐风宋韵。梵天花海3万平方米，四季花海。夜游灯光秀、禅修体验、特色民宿，建议傍晚前往。',lng:120.0765,lat:31.4193},
+  {name:'九龙灌浴',emoji:'⛲',tags:['佛教文化','表演'],dwell:25,must:true,desc:'再现佛陀诞生场景，九龙喷水沐浴太子佛。动态音乐喷泉表演，每天10:00、13:00、15:00上演，建议提前到场。',lng:120.1001,lat:31.4248},
+  {name:'天下第一掌',emoji:'🖐',tags:['佛教文化','建筑'],dwell:15,must:false,desc:'高11.7米，宽5.5米，灵山大佛右手1:1复制品。摸掌祈福，沾福气保平安，游客必打卡点。',lng:120.0970,lat:31.4295},
+  {name:'五印坛城',emoji:'🏯',tags:['建筑','佛教文化','历史'],dwell:30,must:false,desc:'藏传佛教风格建筑，展示藏传佛教艺术。坛城金顶、转经筒、唐卡壁画，感受雪域文化魅力。',lng:120.1030,lat:31.4248},
 ];
 function renderAbout() {
   document.getElementById('aboutCards').innerHTML = ABOUT.map(function(p) {
-    return '<div class="card" style="cursor:pointer" onclick="showPoiDetailAbout(\''+p.name+'\')"><h3>'+p.emoji+' '+p.name+'</h3><p>'+p.desc+'</p><div style="margin-top:8px;font-size:.78rem;color:var(--gold);font-weight:600">点击查看详情 →</div></div>';
+    var aboutDesc = t('about_'+p.id+'_desc') || p.desc;
+    var name = poiName(p);
+    return '<div class="card" style="cursor:pointer" onclick="showPoiDetailAbout(\''+name+'\')"><h3>'+p.emoji+' '+name+'</h3><p>'+aboutDesc+'</p><div style="margin-top:8px;font-size:.78rem;color:var(--gold);font-weight:600" data-i18n="detail_view">'+t('detail_view')+'</div></div>';
   }).join('');
 }
 function showPoiDetailAbout(name) {
-  var p = ABOUT.find(function(x){return x.name===name;}) || POIS.find(function(x){return x.name===name;});
+  var p = ABOUT.find(function(x){return x.name===name||poiName(x)===name;}) || POIS.find(function(x){return x.name===name||poiName(x)===name;});
   if (!p) return;
   _curPoi = p;
-  document.getElementById('poi-detail-title').textContent = p.name;
+  var displayName = poiName(p);
+  setPoiImage(p.name);
+  document.getElementById('poi-detail-title').textContent = displayName;
   document.getElementById('poi-detail-emoji').textContent = p.emoji;
-  document.getElementById('poi-detail-name').textContent = p.name;
-  document.getElementById('poi-detail-desc').textContent = p.desc;
-  document.getElementById('poi-detail-dwell').textContent = '约'+(p.dwell||30)+'分钟';
+  document.getElementById('poi-detail-name').textContent = displayName;
+  document.getElementById('poi-detail-desc').textContent = t('about_'+p.id+'_desc') || poiDesc(p);
+  document.getElementById('poi-detail-dwell').textContent = '~'+(p.dwell||30)+'min';
   document.getElementById('poi-detail-tags').innerHTML = (p.tags||[]).map(function(t){return'<span class="t">'+t+'</span>';}).join('');
-  document.getElementById('poi-detail-rank').textContent = p.must ? '#必看' : '#推荐';
-  document.getElementById('poi-chat-msgs').innerHTML = '<div class="msg ai">👋 你好！我是灵山数字导游。关于「'+p.name+'」，有什么想了解的吗？</div>';
+  document.getElementById('poi-detail-rank').textContent = p.must ? '#Must' : '#Recommended';
+  document.getElementById('poi-chat-msgs').innerHTML = '<div class="msg ai">👋 '+t('poi_welcome').replace('{name}', displayName)+'</div>';
   switchPage('poi-detail', null);
 }
 
 // ======== INIT ========
+applyLang();
 renderPois();
 renderAbout();
+renderQuickGrid();
 genRoute(4, document.querySelector('.time-btn.active'));
 connectGuide();
 </script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 </body>
 </html>

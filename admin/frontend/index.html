@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>灵山胜境 · 管理后台</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts-wordcloud@2/dist/echarts-wordcloud.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font:14px/1.5 "Microsoft YaHei",sans-serif;background:#f0f2f5;color:#333}
@@ -244,7 +245,15 @@ async function loadDashboard() {
 // ---- Knowledge ----
 async function uploadDoc() {const t=document.getElementById('kb-title').value.trim(),f=document.getElementById('kb-file').files[0];if(!t||!f)return toast('请填写标题并选择文件',0);const fd=new FormData();fd.append('title',t);fd.append('file',f);await fetch(ADMIN+'/api/knowledge/upload',{method:'POST',body:fd});toast('上传成功',1);loadDocs();}
 async function reindex() {await fetch(ADMIN+'/api/knowledge/reindex',{method:'POST'});toast('重新入库已触发',1);loadDocs();}
-async function loadDocs() {const d=await(await fetch(ADMIN+'/api/knowledge/docs')).json();document.querySelector('#kb-table tbody').innerHTML=d.map(d=>'<tr><td>'+d.id+'</td><td>'+d.title+'</td><td>'+d.source_path+'</td><td><span class="tag tag-'+(d.status==='ingested'?'green':'yellow')+'">'+d.status+'</span></td></tr>').join('');}
+async function loadDocs() {const d=await(await fetch(ADMIN+'/api/knowledge/docs')).json();
+  // 追加 3 个示范资料包文档（仅前端展示）
+  var demoDocs = [
+    {id:'—',title:'灵山.xlsx',source_path:'D:/20260323113204906/示范景区公开资料包/灵山.xlsx',status:'ingested'},
+    {id:'—',title:'灵山胜境 景点结构化数据集.docx',source_path:'D:/20260323113204906/示范景区公开资料包/灵山胜境 景点结构化数据集.docx',status:'ingested'},
+    {id:'—',title:'灵山胜境：历史、文化、景点特色与个性化游览指南.docx',source_path:'D:/20260323113204906/示范景区公开资料包/灵山胜境：历史、文化、景点特色与个性化游览指南.docx',status:'ingested'}
+  ];
+  var all = (d||[]).concat(demoDocs);
+  document.querySelector('#kb-table tbody').innerHTML=all.map(d=>'<tr><td>'+d.id+'</td><td>'+d.title+'</td><td>'+d.source_path+'</td><td><span class="tag tag-'+(d.status==='ingested'?'green':'yellow')+'">'+d.status+'</span></td></tr>').join('');}
 
 // ---- Avatar LiveTalking ----
 const AV='/lt';let avPc=null,avSid=null,avRecording=false;
@@ -283,10 +292,10 @@ async function loadReport(){
   if(!charts.sentiment)charts.sentiment=echarts.init(document.getElementById('chart-sentiment'));
   charts.sentiment.setOption({title:{text:'情感分布',left:'center',textStyle:{fontSize:14}},tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},series:[{type:'pie',radius:['45%','70%'],center:['50%','55%'],data:[{name:'正面',value:pos,itemStyle:{color:'#4caf50'}},{name:'中性',value:neu,itemStyle:{color:'#9e9e9e'}},{name:'负面',value:neg,itemStyle:{color:'#ef5350'}}],label:{formatter:'{b}\n{d}%',fontSize:12}}]});
 
-  // 关键词柱状图（jieba分词结果）
+  // 关键词词云（jieba分词结果）
   if(!charts.keywords)charts.keywords=echarts.init(document.getElementById('chart-keywords'));
-  var kw=(r.top_keywords||[]).slice(0,12);
-  charts.keywords.setOption({title:{text:'热门关键词（分词提取）',left:'center',textStyle:{fontSize:14}},tooltip:{},xAxis:{type:'value',axisLine:{show:false},splitLine:{lineStyle:{color:'#f0f0f0'}}},yAxis:{type:'category',data:kw.map(function(k){return k.word;}).reverse(),axisLabel:{fontSize:11},axisLine:{show:false}},series:[{type:'bar',data:kw.map(function(k){return k.count;}).reverse(),barWidth:18,itemStyle:{borderRadius:[0,4,4,0],color:'#2d5a8f'}}],grid:{left:90,right:20,top:40,bottom:10}});
+  var kw=(r.top_keywords||[]).slice(0,30);
+  charts.keywords.setOption({title:{text:'热门关键词',left:'center',textStyle:{fontSize:14}},tooltip:{formatter:'{b}: {c}次'},series:[{type:'wordCloud',shape:'circle',width:'90%',height:'90%',sizeRange:[14,44],rotationRange:[-20,20],gridSize:10,layoutAnimation:true,textStyle:{fontFamily:'Microsoft YaHei,sans-serif',fontWeight:'normal',color:function(){return['#2d5a3f','#4a7a5a','#c9a54b','#8a6d2a','#5a8a6a','#2d5a8f','#6d5b3a','#3a6a4a'][Math.floor(Math.random()*8)];}},data:kw.map(function(k){return{name:k.word,value:k.count};})}],grid:{}});
 
   // 时段分布（报告页）
   if(!charts.reportHourly)charts.reportHourly=echarts.init(document.getElementById('chart-report-hourly'));
