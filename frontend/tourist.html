@@ -826,7 +826,8 @@ function poiDesc(p) { return t('poi_'+p.id+'_desc') || p.desc; }
 function renderPois() {
   var card = function(p) {
     var name = poiName(p);
-    var qrUrl = window.location.origin + '/tourist?poi=' + p.id;
+    var qrBase = window.location.hostname === 'localhost' ? 'http://192.168.5.171:8011' : window.location.origin;
+    var qrUrl = qrBase + '/tourist?poi=' + p.id;
     var qrImg = 'https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=' + encodeURIComponent(qrUrl);
     return '<div class="poi-card"><div class="poi-thumb ' + thumbClass(p.tags) + '" onclick="askAbout(\'' + name + '\')">' + p.emoji + (p.must ? '<span class="must-flag" data-i18n="must_flag">' + t('must_flag') + '</span>' : '') + '</div><div class="poi-body" onclick="askAbout(\'' + name + '\')"><div class="name">' + name + '</div><div class="poi-tags">' + p.tags.map(function(t) { return '<span class="t">' + t + '</span>'; }).join('') + '</div><div class="poi-meta"><span>⏱ ~' + p.dwell + 'min</span><span class="ask">' + t('poi_ask') + '</span></div></div><div style="padding:0 16px 12px;display:flex;justify-content:center"><img src="' + qrImg + '" alt="QR" style="width:60px;height:60px;border-radius:4px;border:1px solid #e0d6bf" onclick="event.stopPropagation()" title="' + LANG + '"></div></div>';
   };
@@ -886,7 +887,8 @@ function showPoiDetail(name) {
 function generatePoiQR(poiId) {
   var qrContainer = document.getElementById('poi-qr-code');
   qrContainer.innerHTML = '';
-  var url = window.location.origin + '/tourist?poi=' + poiId;
+  var qrBase = window.location.hostname === 'localhost' ? 'http://192.168.5.171:8011' : window.location.origin;
+  var url = qrBase + '/tourist?poi=' + poiId;
   new QRCode(qrContainer, {
     text: url, width: 120, height: 120,
     colorDark: '#3a2f1f', colorLight: '#ffffff',

@@ -46,9 +46,9 @@ var POIS = [
   {id:'p12',name:'禅意小镇',emoji:'🏮'}
 ];
 
-// 自动检测当前服务器地址
+// 服务器地址（优先用局域网IP，手机才能扫描）
 var baseUrl = document.getElementById('baseUrl');
-baseUrl.value = window.location.origin;
+baseUrl.value = window.location.hostname === 'localhost' ? 'http://192.168.5.171:8011' : window.location.origin;
 
 function generateAll() {
   var base = baseUrl.value.trim().replace(/\/+$/, '');
