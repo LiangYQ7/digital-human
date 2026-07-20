@@ -28,7 +28,11 @@
       "Bash(ipconfig)",
       "Bash(git commit -m 'fix: QR码默认使用局域网IP\\(192.168.5.171:8011\\)，手机可扫 *)",
       "Bash(node -e ' *)",
-      "Bash(git commit -m 'fix: 定位模式改为选图即自动发送，无需手动按回车 *)"
+      "Bash(git commit -m 'fix: 定位模式改为选图即自动发送，无需手动按回车 *)",
+      "Bash(git commit -m 'feat: 天气横幅常驻、视觉定位/二维码签到/天气预警功能完善' -m '- 天气横幅始终显示：良好天气绿色友好风，风险天气橙色预警 *)",
+      "Bash(git config *)",
+      "Bash(git -c http.proxy= -c https.proxy= push origin master)",
+      "Bash(xargs -0 grep -l 'frontend/index\\\\|frontend/tourist\\\\|frontend/guide')"
     ]
   }
 }
