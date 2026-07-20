@@ -1,7 +1,7 @@
 """CosyVoice TTS 克隆服务。监听 8091 端口。
 环境变量 DASHSCOPE_API_KEY 可切换为云端合成（快，~1-2s），否则走本地 CPU 推理（慢，~15-30s）。
 """
-import os, sys, json, tempfile, uuid, shutil, base64
+import os, re, sys, json, tempfile, uuid, shutil, base64
 from pathlib import Path
 from dotenv import load_dotenv
 # 加载项目根目录 .env
@@ -58,7 +58,7 @@ async def _register_cloud_voice(voice: str) -> str | None:
         "input": {
             "action": "create_voice",
             "target_model": "cosyvoice-v3.5-flash",
-            "prefix": voice[:10],
+            "prefix": re.sub(r'[^a-zA-Z0-9]', '', voice)[:10],
             "url": f"data:audio/wav;base64,{ref_b64}",
         },
     }
