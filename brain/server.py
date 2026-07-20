@@ -455,7 +455,7 @@ if SCENIC_IMG_DIR.exists():
 
 @app.get("/scenic_{n}.webp")
 def scenic_img(n: int):
-    return FileResponse(str(FRONTEND / f"scenic_{n}.webp"))
+    return FileResponse(str(SCENIC_IMG_DIR / f"{n}.webp"))
 
 
 if __name__ == "__main__":
