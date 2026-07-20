@@ -203,6 +203,11 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
         <input type="text" id="chatInput" data-i18n="send_placeholder" placeholder="输入问题，按回车发送..." onkeydown="if(event.key==='Enter')sendText()">
         <button class="btn-send" onclick="sendText()">➤</button>
       </div>
+      <!-- 定位地图 -->
+      <div id="locateMapBar" style="display:none;height:200px;border-top:1px solid #eee;position:relative">
+        <div id="locateMap" style="width:100%;height:100%"></div>
+        <button onclick="closeLocateMap()" style="position:absolute;top:4px;right:4px;z-index:10;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:12px;line-height:24px">✕</button>
+      </div>
       <!-- 评分栏 -->
       <div id="ratingBar" style="display:none;padding:8px 14px;border-top:1px solid #eee;background:#faf8f3;text-align:center">
         <span style="font-size:.78rem;color:#888;margin-right:8px" data-i18n="rating_label">评价本次服务：</span>
@@ -410,10 +415,10 @@ var I18N = {
   // About data translations
   'about_p1_desc': ['通高88米，青铜铸造，世界最高铜佛像之一。右手施无畏印，左手施与愿印，俯瞰太湖。佛像内部有电梯可达佛脚平台，俯瞰太湖美景。', '88m bronze statue, one of the tallest in the world. Right hand in abhaya mudra, left in varada mudra. Elevator to foot platform with lake views.'],
   'about_p2_desc': ['建筑面积7.2万平方米，造价18亿。金碧辉煌的佛教艺术殿堂，融合传统工艺与现代建筑。内部珍宝馆藏有大量佛教文物。', '72,000㎡ built at ¥1.8B. A magnificent Buddhist art palace blending traditional crafts with modern architecture.'],
-  'about_p3_desc': ['禅意小镇，唐风宋韵。梵天花海3万平方米，四季花海。夜游灯光秀、禅修体验、特色民宿，建议傍晚前往。', 'Zen town in Tang-Song style. 30,000㎡ flower fields blooming year-round. Night light shows, meditation, boutique stays.'],
+  'about_p5_desc': ['禅意小镇，唐风宋韵。梵天花海3万平方米，四季花海。夜游灯光秀、禅修体验、特色民宿，建议傍晚前往。', 'Zen town in Tang-Song style. 30,000㎡ flower fields blooming year-round. Night light shows, meditation, boutique stays.'],
   'about_p4_desc': ['再现佛陀诞生场景，九龙喷水沐浴太子佛。动态音乐喷泉表演，每天10:00、13:00、15:00上演，建议提前到场。', 'Reenacts Buddha\'s birth with nine dragons bathing the prince. Musical fountain shows at 10:00, 13:00, 15:00 daily.'],
-  'about_p5_desc': ['高11.7米，宽5.5米，灵山大佛右手1:1复制品。摸掌祈福，沾福气保平安，游客必打卡点。', '11.7m tall, 1:1 replica of the Grand Buddha\'s right hand. Touch for blessings - a must-visit photo spot.'],
-  'about_p6_desc': ['藏传佛教风格建筑，展示藏传佛教艺术。坛城金顶、转经筒、唐卡壁画，感受雪域文化魅力。', 'Tibetan Buddhist style with golden dome, prayer wheels, and Thangka murals. Experience Himalayan culture.'],
+  'about_p6_desc': ['高11.7米，宽5.5米，灵山大佛右手1:1复制品。摸掌祈福，沾福气保平安，游客必打卡点。', '11.7m tall, 1:1 replica of the Grand Buddha\'s right hand. Touch for blessings - a must-visit photo spot.'],
+  'about_p3_desc': ['藏传佛教风格建筑，展示藏传佛教艺术。坛城金顶、转经筒、唐卡壁画，感受雪域文化魅力。', 'Tibetan Buddhist style with golden dome, prayer wheels, and Thangka murals. Experience Himalayan culture.'],
 };
 
 function t(key) {
@@ -701,21 +706,33 @@ function sendText() {
 // ======== LOCATION PIN ON MAP ========
 var _locateMarker = null;
 function showLocationPin(lat, lng, landmark, msg) {
-  // 切换到导览页显示地图标记
-  switchPage('guide', document.querySelector('nav a[data-page="guide"]'));
-  // 用 Leaflet 在地图上标记（如果地图已初始化）
+  // 在导览页聊天区下方显示地图标记
+  var bar = document.getElementById('locateMapBar');
+  bar.style.display = 'block';
+  // ponytail: init a dedicated Leaflet map for the locate panel
   setTimeout(function() {
-    initLeafletMap();
-    if (!leafletMap) return;
-    if (_locateMarker) leafletMap.removeLayer(_locateMarker);
+    if (window._locateLeafletMap) {
+      window._locateLeafletMap.remove();
+    }
+    window._locateLeafletMap = L.map('locateMap', {
+      attributionControl: false, zoomControl: false
+    }).setView([lat, lng], 17);
+    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+      subdomains: ['1','2','3','4'], maxZoom: 18
+    }).addTo(window._locateLeafletMap);
     var icon = L.divIcon({
-      html: '<div style="background:#e85d3a;color:#fff;width:28px;height:28px;border-radius:50%;text-align:center;line-height:28px;font-size:16px;box-shadow:0 2px 12px rgba(232,93,58,.5);border:2px solid #fff;animation:pulse 1.5s infinite">📍</div>',
-      className: '', iconSize: [28, 28], iconAnchor: [14, 14],
+      html: '<div style="background:#e85d3a;color:#fff;width:32px;height:32px;border-radius:50%;text-align:center;line-height:32px;font-size:18px;box-shadow:0 2px 14px rgba(232,93,58,.6);border:3px solid #fff;animation:pulse 1.5s infinite">📍</div>',
+      className: '', iconSize: [32, 32], iconAnchor: [16, 16],
     });
-    _locateMarker = L.marker([lat, lng], { icon: icon }).addTo(leafletMap);
-    _locateMarker.bindPopup('<b>' + landmark + '</b><br><span style="font-size:.8rem">' + msg + '</span>').openPopup();
-    leafletMap.setView([lat, lng], 16);
-  }, 500);
+    L.marker([lat, lng], { icon: icon })
+      .addTo(window._locateLeafletMap)
+      .bindPopup('<b>' + landmark + '</b><br><span style="font-size:.8rem">' + msg + '</span>')
+      .openPopup();
+  }, 300);
+}
+function closeLocateMap() {
+  document.getElementById('locateMapBar').style.display = 'none';
+  if (window._locateLeafletMap) { window._locateLeafletMap.remove(); window._locateLeafletMap = null; }
 }
 function quickAsk(text) { switchPage('guide', document.querySelector('nav a[data-page="guide"]')); document.getElementById('chatInput').value = text; sendText(); }
 
@@ -809,7 +826,9 @@ function poiDesc(p) { return t('poi_'+p.id+'_desc') || p.desc; }
 function renderPois() {
   var card = function(p) {
     var name = poiName(p);
-    return '<div class="poi-card" onclick="askAbout(\'' + name + '\')"><div class="poi-thumb ' + thumbClass(p.tags) + '">' + p.emoji + (p.must ? '<span class="must-flag" data-i18n="must_flag">' + t('must_flag') + '</span>' : '') + '</div><div class="poi-body"><div class="name">' + name + '</div><div class="poi-tags">' + p.tags.map(function(t) { return '<span class="t">' + t + '</span>'; }).join('') + '</div><div class="poi-meta"><span>⏱ ~' + p.dwell + 'min</span><span class="ask">' + t('poi_ask') + '</span></div></div></div>';
+    var qrUrl = window.location.origin + '/tourist?poi=' + p.id;
+    var qrImg = 'https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=' + encodeURIComponent(qrUrl);
+    return '<div class="poi-card"><div class="poi-thumb ' + thumbClass(p.tags) + '" onclick="askAbout(\'' + name + '\')">' + p.emoji + (p.must ? '<span class="must-flag" data-i18n="must_flag">' + t('must_flag') + '</span>' : '') + '</div><div class="poi-body" onclick="askAbout(\'' + name + '\')"><div class="name">' + name + '</div><div class="poi-tags">' + p.tags.map(function(t) { return '<span class="t">' + t + '</span>'; }).join('') + '</div><div class="poi-meta"><span>⏱ ~' + p.dwell + 'min</span><span class="ask">' + t('poi_ask') + '</span></div></div><div style="padding:0 16px 12px;display:flex;justify-content:center"><img src="' + qrImg + '" alt="QR" style="width:60px;height:60px;border-radius:4px;border:1px solid #e0d6bf" onclick="event.stopPropagation()" title="' + LANG + '"></div></div>';
   };
   document.getElementById('poiMust').innerHTML = POIS.filter(function(p) { return p.must; }).map(card).join('');
   document.getElementById('poiOther').innerHTML = POIS.filter(function(p) { return !p.must; }).map(card).join('');
@@ -1044,12 +1063,12 @@ window.addEventListener('scroll', function() { var b = document.getElementById('
 
 // ======== ABOUT ========
 var ABOUT = [
-  {name:'灵山大佛',emoji:'🏯',tags:['佛教文化','建筑','历史'],dwell:40,must:true,desc:'通高88米，青铜铸造，世界最高铜佛像之一。右手施无畏印，左手施与愿印，俯瞰太湖。佛像内部有电梯可达佛脚平台，俯瞰太湖美景。',lng:120.0964,lat:31.4303},
-  {name:'灵山梵宫',emoji:'🏛',tags:['建筑','佛教文化','艺术'],dwell:50,must:true,desc:'建筑面积7.2万平方米，造价18亿。金碧辉煌的佛教艺术殿堂，融合传统工艺与现代建筑。内部珍宝馆藏有大量佛教文物。',lng:120.1024,lat:31.4289},
-  {name:'拈花湾',emoji:'🌸',tags:['自然风光','禅意','休闲','夜景'],dwell:90,must:true,desc:'禅意小镇，唐风宋韵。梵天花海3万平方米，四季花海。夜游灯光秀、禅修体验、特色民宿，建议傍晚前往。',lng:120.0765,lat:31.4193},
-  {name:'九龙灌浴',emoji:'⛲',tags:['佛教文化','表演'],dwell:25,must:true,desc:'再现佛陀诞生场景，九龙喷水沐浴太子佛。动态音乐喷泉表演，每天10:00、13:00、15:00上演，建议提前到场。',lng:120.1001,lat:31.4248},
-  {name:'天下第一掌',emoji:'🖐',tags:['佛教文化','建筑'],dwell:15,must:false,desc:'高11.7米，宽5.5米，灵山大佛右手1:1复制品。摸掌祈福，沾福气保平安，游客必打卡点。',lng:120.0970,lat:31.4295},
-  {name:'五印坛城',emoji:'🏯',tags:['建筑','佛教文化','历史'],dwell:30,must:false,desc:'藏传佛教风格建筑，展示藏传佛教艺术。坛城金顶、转经筒、唐卡壁画，感受雪域文化魅力。',lng:120.1030,lat:31.4248},
+  {id:'p1',name:'灵山大佛',emoji:'🏯',tags:['佛教文化','建筑','历史'],dwell:40,must:true,desc:'通高88米，青铜铸造，世界最高铜佛像之一。右手施无畏印，左手施与愿印，俯瞰太湖。佛像内部有电梯可达佛脚平台，俯瞰太湖美景。',lng:120.0964,lat:31.4303},
+  {id:'p2',name:'灵山梵宫',emoji:'🏛',tags:['建筑','佛教文化','艺术'],dwell:50,must:true,desc:'建筑面积7.2万平方米，造价18亿。金碧辉煌的佛教艺术殿堂，融合传统工艺与现代建筑。内部珍宝馆藏有大量佛教文物。',lng:120.1024,lat:31.4289},
+  {id:'p5',name:'拈花湾',emoji:'🌸',tags:['自然风光','禅意','休闲','夜景'],dwell:90,must:true,desc:'禅意小镇，唐风宋韵。梵天花海3万平方米，四季花海。夜游灯光秀、禅修体验、特色民宿，建议傍晚前往。',lng:120.0765,lat:31.4193},
+  {id:'p4',name:'九龙灌浴',emoji:'⛲',tags:['佛教文化','表演'],dwell:25,must:true,desc:'再现佛陀诞生场景，九龙喷水沐浴太子佛。动态音乐喷泉表演，每天10:00、13:00、15:00上演，建议提前到场。',lng:120.1001,lat:31.4248},
+  {id:'p6',name:'天下第一掌',emoji:'🖐',tags:['佛教文化','建筑'],dwell:15,must:false,desc:'高11.7米，宽5.5米，灵山大佛右手1:1复制品。摸掌祈福，沾福气保平安，游客必打卡点。',lng:120.0970,lat:31.4295},
+  {id:'p3',name:'五印坛城',emoji:'🏯',tags:['建筑','佛教文化','历史'],dwell:30,must:false,desc:'藏传佛教风格建筑，展示藏传佛教艺术。坛城金顶、转经筒、唐卡壁画，感受雪域文化魅力。',lng:120.1030,lat:31.4248},
 ];
 function renderAbout() {
   document.getElementById('aboutCards').innerHTML = ABOUT.map(function(p) {
