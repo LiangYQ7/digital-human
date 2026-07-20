@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>灵山胜境 · 景点签到二维码</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Microsoft YaHei",sans-serif;padding:20px;background:#f5f0e8}
+h1{text-align:center;color:#3a2f1f;margin-bottom:8px}
+p.sub{text-align:center;color:#888;font-size:.85rem;margin-bottom:24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}
+.card{background:#fff;border-radius:12px;padding:20px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.card h3{font-size:1rem;color:#3a2f1f;margin-bottom:12px}
+.card .qr-wrap{display:inline-block;padding:8px;background:#fff;border:2px solid #e0d6bf;border-radius:8px}
+.card .info{font-size:.75rem;color:#999;margin-top:8px}
+@media print{body{background:#fff} .card{box-shadow:none;border:1px solid #eee;break-inside:avoid}}
+</style>
+</head>
+<body>
+<h1>🏯 灵山胜境 · 景点签到二维码</h1>
+<p class="sub">打印后张贴于各景点入口，游客扫码即可定位并获取 AI 讲解</p>
+<div class="grid" id="grid"></div>
+<script>
+var POIS = [
+  {id:'p1',name:'灵山大佛',emoji:'🏯'},
+  {id:'p2',name:'梵宫',emoji:'🏛'},
+  {id:'p3',name:'五印坛城',emoji:'🏯'},
+  {id:'p4',name:'九龙灌浴',emoji:'⛲'},
+  {id:'p5',name:'拈花湾',emoji:'🌸'},
+  {id:'p6',name:'天下第一掌',emoji:'🖐'},
+  {id:'p7',name:'曼飞龙塔',emoji:'🏛'},
+  {id:'p8',name:'灵山博物馆',emoji:'🏺'},
+  {id:'p9',name:'百子戏弥勒',emoji:'😊'},
+  {id:'p10',name:'阿育王柱',emoji:'🗼'},
+  {id:'p11',name:'灵山花海',emoji:'🌷'},
+  {id:'p12',name:'禅意小镇',emoji:'🏮'}
+];
+var grid = document.getElementById('grid');
+POIS.forEach(function(p) {
+  var card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = '<h3>'+p.emoji+' '+p.name+'</h3><div class="qr-wrap" id="qr-'+p.id+'"></div><div class="info">编码：LINGSHAN:'+p.id+' | 扫码即签到</div>';
+  grid.appendChild(card);
+  new QRCode(document.getElementById('qr-'+p.id), {
+    text: 'LINGSHAN:' + p.id,
+    width: 160, height: 160,
+    colorDark: '#3a2f1f', colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+});
+</script>
+</body>
+</html>

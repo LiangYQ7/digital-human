@@ -26,10 +26,25 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 dashscope.api_key = os.getenv("DASHSCOPE_API_KEY", "")
 
 
+@app.on_event("startup")
+async def startup():
+    """预加载重模型，消除首次请求冷启动延迟。"""
+    import time
+    # BGE-M3 embedding 模型（~17s，消除首次 RAG 冷启动）
+    from brain.rag.store import warmup as rag_warmup
+    rag_warmup()
+    # Whisper ASR 模型（~4s，消除首次语音识别冷启动）
+    t0 = time.time()
+    print("[STARTUP] 预加载 Whisper 模型...", flush=True)
+    _get_whisper()
+    print(f"[STARTUP] 全部就绪 ({time.time() - t0:.1f}s)", flush=True)
+
+
 class AskRequest(BaseModel):
     text: str
     sessionid: str = ""
     image_path: str | None = None
+    image_base64: str | None = None  # 浏览器上传的 base64 图片数据
 
 
 class AskResponse(BaseModel):
@@ -37,6 +52,9 @@ class AskResponse(BaseModel):
     delivered: bool
     latency_sec: float
     intent: str
+    landmark: str = ""
+    lat: float | None = None
+    lng: float | None = None
 
 
 class VoiceRequest(BaseModel):
@@ -46,7 +64,32 @@ class VoiceRequest(BaseModel):
 
 @app.post("/ask", response_model=AskResponse)
 async def ask(req: AskRequest):
-    result = handle_user_input(text=req.text, image_path=req.image_path, sessionid=req.sessionid)
+    t_start = __import__("time").time()
+    result = handle_user_input(text=req.text, image_path=req.image_path,
+                               image_base64=req.image_base64, sessionid=req.sessionid)
+
+    # 记录 ChatLog（数据大屏 + 游客报告的数据源）
+    try:
+        from app.database import SessionLocal
+        from app.models import ChatLog
+        db = SessionLocal()
+        sid = req.sessionid or "anon"
+        # 用户消息
+        db.add(ChatLog(session_id=sid, role="user", content=req.text, latency_sec=0,
+                        sentiment="neu",
+                        extra={"has_image": bool(req.image_base64 or req.image_path)}))
+        # AI 回复（简单情感判断）
+        reply_text = result.get("reply", "")
+        lat = round(__import__("time").time() - t_start, 2)
+        sent = "pos" if any(w in reply_text for w in ["欢迎","感谢","祝","高兴","期待"]) else "neu"
+        db.add(ChatLog(session_id=sid, role="assistant", content=reply_text,
+                        latency_sec=lat, sentiment=sent,
+                        extra={"intent": result.get("intent", "chat"), "delivered": result.get("delivered", False)}))
+        db.commit()
+        db.close()
+    except Exception:
+        pass  # 不影响主流程
+
     return AskResponse(**result)
 
 
@@ -173,6 +216,71 @@ def set_voice(req: VoiceRequest):
 def get_active():
     from brain.adapter.livetalking_bridge import get_active_config
     return get_active_config()
+
+
+# ── 天气模块 ──
+import yaml as _yaml
+_weather_cache = {"data": None, "ts": 0}
+
+# 天气敏感景点映射：哪些天气影响哪些景点
+_WEATHER_AFFECTED = {
+    "Rain": ["九龙灌浴", "大佛登顶", "拈花湾夜游", "灵山花海"],
+    "Thunderstorm": ["九龙灌浴", "大佛登顶", "灵山大佛", "拈花湾夜游"],
+    "Snow": ["大佛登顶", "灵山花海"],
+    "Extreme": ["大佛登顶", "九龙灌浴"],
+}
+_WEATHER_INDOOR = ["梵宫", "五印坛城", "灵山博物馆"]  # 推荐室内替代
+
+@app.get("/api/weather")
+def get_weather():
+    global _weather_cache
+    # 读取配置
+    cfg_path = os.path.join(os.path.dirname(__file__), "config", "settings.yaml")
+    cfg = _yaml.safe_load(open(cfg_path, encoding="utf-8"))["weather"]
+    cache_sec = cfg.get("cache_minutes", 30) * 60
+    now = __import__("time").time()
+    if _weather_cache["data"] and (now - _weather_cache["ts"]) < cache_sec:
+        return _weather_cache["data"]
+
+    api_key = os.getenv(cfg["api_key_env"], "")
+    lat, lng = cfg["lat"], cfg["lng"]
+    try:
+        import urllib.request as _req, json as _json
+        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lng}&appid={api_key}&units=metric&lang=zh_cn"
+        with _req.urlopen(url, timeout=5) as resp:
+            raw = _json.loads(resp.read())
+        condition_id = raw["weather"][0]["id"]
+        condition = raw["weather"][0]["main"]
+        description = raw["weather"][0]["description"]
+        temp = round(raw["main"]["temp"])
+        feels_like = round(raw["main"]["feels_like"])
+
+        alert = None
+        if condition_id // 100 == 2:  # Thunderstorm
+            alert = "雷暴预警"
+        elif condition_id // 100 == 5:  # Rain
+            alert = f"{description}，注意带伞"
+        elif condition_id // 100 == 6:  # Snow
+            alert = "降雪预警"
+        elif temp > 38:
+            alert = "高温预警，注意防暑"
+
+        affected = _WEATHER_AFFECTED.get(condition, [])
+        if alert is None:
+            alert = "天气良好，适宜游览"
+            affected = []
+
+        data = {
+            "temp": temp, "feels_like": feels_like,
+            "condition": description, "alert": alert,
+            "affected": affected, "suggestion": f"建议优先游览{'、'.join(_WEATHER_INDOOR)}等室内景点" if affected else "全天候适宜户外游览",
+        }
+        _weather_cache = {"data": data, "ts": now}
+        return data
+    except Exception as e:
+        # 离线或无 API key 时返回兜底数据
+        return {"temp": 28, "feels_like": 27, "condition": "多云转晴",
+                "alert": None, "affected": [], "suggestion": "", "_fallback": True, "_error": str(e)}
 
 
 @app.get("/health")
@@ -340,7 +448,11 @@ def test_webrtc():
 def admin_page():
     return HTMLResponse((Path(__file__).parent.parent / "admin" / "frontend" / "index.html").read_text(encoding="utf-8"))
 
-# ── 图片 ──
+# ── 景区图片 ──
+SCENIC_IMG_DIR = Path(__file__).parent.parent / "灵山胜境"
+if SCENIC_IMG_DIR.exists():
+    app.mount("/scenic_images", StaticFiles(directory=str(SCENIC_IMG_DIR)), name="scenic_images")
+
 @app.get("/scenic_{n}.webp")
 def scenic_img(n: int):
     return FileResponse(str(FRONTEND / f"scenic_{n}.webp"))

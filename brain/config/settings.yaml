@@ -2,3 +2,9 @@ llm:
   provider: qwen-omni
   model: qwen3-omni-flash
   api_key_env: DASHSCOPE_API_KEY
+
+weather:
+  api_key_env: OPENWEATHER_API_KEY
+  lat: 31.422
+  lng: 120.104
+  cache_minutes: 30

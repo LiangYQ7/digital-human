@@ -129,6 +129,8 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
   </div>
 </nav>
 
+<div id="weatherAlert" style="display:none;background:linear-gradient(135deg,#e65100,#ff9800);color:#fff;text-align:center;padding:10px 16px;font-size:.85rem;cursor:pointer" onclick="switchPage('guide',document.querySelector('nav a[data-page=guide]'))"></div>
+
 <section class="page active" id="page-home">
   <div class="hero">
     <h1 data-i18n="hero_h1">灵山胜境 · 拈花湾</h1>
@@ -143,8 +145,8 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
     <div class="weather-card">
-      <div style="font-size:2.4rem">⛅</div>
-      <div><div class="w-temp">28°</div><div class="w-info" data-i18n="weather_label">无锡 · 多云转晴<br>体感舒适，适宜游玩<br>建议防晒，携带饮水</div></div>
+      <div style="font-size:2.4rem" id="weatherEmoji">⛅</div>
+      <div><div class="w-temp" id="weatherTemp">--°</div><div class="w-info" id="weatherInfo">加载中...</div></div>
     </div>
     <div class="card">
       <h3 style="margin-bottom:12px" data-i18n="tips_title">💡 今日游玩提示</h3>
@@ -196,6 +198,8 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
       <div class="chat-input">
         <button class="btn-mic" id="micBtn" onclick="toggleMic()">🎤</button>
         <button class="btn-camera" id="camBtn" onclick="openCamera()" title="拍照识景">📷</button>
+        <button class="btn-camera" id="locateBtn" onclick="openLocate()" title="定位（GPS弱时使用）" style="font-size:.85rem">📍</button>
+        <button class="btn-camera" id="qrBtn" onclick="openQRScan()" title="扫码签到" style="font-size:.85rem">📱</button>
         <input type="text" id="chatInput" data-i18n="send_placeholder" placeholder="输入问题，按回车发送..." onkeydown="if(event.key==='Enter')sendText()">
         <button class="btn-send" onclick="sendText()">➤</button>
       </div>
@@ -552,14 +556,26 @@ function handleImageFile(event) {
   var file = event.target.files[0];
   if (!file) return;
   compressImage(file, 800, function(dataUrl) {
-    pendingImage = dataUrl;
-    document.getElementById('imagePreviewImg').src = dataUrl;
-    document.getElementById('imagePreview').style.display = 'block';
-    document.getElementById('chatInput').placeholder = t('photo_placeholder');
-    document.getElementById('chatInput').focus();
-    // 聊天消息区自动滚动到底部
-    var msgs = document.getElementById('chatMsgs');
-    msgs.scrollTop = msgs.scrollHeight;
+    if (pendingQR) {
+      // QR 扫码模式：直接解码，不进入聊天流
+      tryDecodeQR(dataUrl);
+    } else if (pendingLocate) {
+      // 定位模式：进入聊天流，发送时附带"我在哪"
+      pendingImage = dataUrl;
+      document.getElementById('imagePreviewImg').src = dataUrl;
+      document.getElementById('imagePreview').style.display = 'block';
+      document.getElementById('chatInput').placeholder = t('photo_placeholder');
+      document.getElementById('chatInput').focus();
+    } else {
+      // 拍照识景模式
+      pendingImage = dataUrl;
+      document.getElementById('imagePreviewImg').src = dataUrl;
+      document.getElementById('imagePreview').style.display = 'block';
+      document.getElementById('chatInput').placeholder = t('photo_placeholder');
+      document.getElementById('chatInput').focus();
+      var msgs = document.getElementById('chatMsgs');
+      msgs.scrollTop = msgs.scrollHeight;
+    }
   });
   event.target.value = '';
 }
@@ -583,10 +599,57 @@ function compressImage(file, maxWidth, callback) {
 }
 
 function cancelImage() {
-  pendingImage = null;
+  pendingImage = null; pendingLocate = false;
   document.getElementById('imagePreview').style.display = 'none';
   document.getElementById('imagePreviewImg').src = '';
   document.getElementById('chatInput').placeholder = t('send_placeholder');
+}
+
+// ======== LOCATE ========
+var pendingLocate = false;
+function openLocate() {
+  // ponytail: 复用拍照流程，加标记区分"定位"和"识景"
+  pendingLocate = true;
+  openCamera();
+}
+
+// ======== QR SCAN ========
+var pendingQR = false;
+function openQRScan() {
+  pendingQR = true;
+  openCamera();
+}
+function tryDecodeQR(dataUrl) {
+  // 用 jsQR 解码图片中的二维码
+  var img = new Image();
+  img.onload = function() {
+    var canvas = document.createElement('canvas');
+    canvas.width = img.width; canvas.height = img.height;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    var imageData = ctx.getImageData(0, 0, img.width, img.height);
+    var code = jsQR(imageData.data, img.width, img.height);
+    if (code && code.data) {
+      // 二维码格式：LINGSHAN:POI:p1 或直接用 poi_id
+      var data = code.data;
+      var poiId = data;
+      if (data.indexOf('LINGSHAN:') === 0) {
+        // 支持 LINGSHAN:POI:p1 或 LINGSHAN:p1 格式
+        poiId = data.replace('LINGSHAN:', '').replace('POI:', '');
+      }
+      var poi = POIS.find(function(p) { return p.id === poiId; });
+      if (poi) {
+        showPoiDetail(poi.name);
+        toast('✅ ' + (LANG === 'zh' ? '已签到：' : 'Checked in: ') + poiName(poi), 1);
+      } else {
+        toast((LANG === 'zh' ? '二维码无法识别' : 'QR not recognized'), 0);
+      }
+    } else {
+      toast((LANG === 'zh' ? '未检测到二维码，请对准重试' : 'No QR detected, try again'), 0);
+    }
+    pendingQR = false;
+  };
+  img.src = dataUrl;
 }
 
 // ======== CHAT ========
@@ -607,18 +670,44 @@ function removeTyping() { if (typingEl) { typingEl.remove(); typingEl = null; } 
 function sendText() {
   var t = document.getElementById('chatInput').value.trim();
   var img = pendingImage;
+  var isLocate = pendingLocate;
   if (!t && !img) return;
   if (!sessionid) { sessionid = 'web_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
-  var display = t || (LANG === 'zh' ? '📷 拍照识景' : '📷 Photo Recognition');
+  var display = t || (isLocate ? (LANG === 'zh' ? '📍 定位中...' : '📍 Locating...') : (LANG === 'zh' ? '📷 拍照识景' : '📷 Photo Recognition'));
   addMsg('user', display, img);
   document.getElementById('chatInput').value = '';
   cancelImage();
   addTyping();
-  var body = { text: t || '请识别并介绍这张照片', sessionid: sessionid };
+  var promptText = t || (isLocate ? '我在哪' : '请识别并介绍这张照片');
+  var body = { text: promptText, sessionid: sessionid };
   if (img) body.image_base64 = img;
   fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    .then(function(r) { return r.json(); }).then(function(d) { removeTyping(); addMsg('ai', d.reply); showRatingBar(); })
+    .then(function(r) { return r.json(); }).then(function(d) {
+      removeTyping(); addMsg('ai', d.reply);
+      if (d.landmark && d.lat && d.lng) showLocationPin(d.lat, d.lng, d.landmark, d.reply);
+      showRatingBar();
+    })
     .catch(function() { removeTyping(); addMsg('ai', t('sorry')); });
+}
+
+// ======== LOCATION PIN ON MAP ========
+var _locateMarker = null;
+function showLocationPin(lat, lng, landmark, msg) {
+  // 切换到导览页显示地图标记
+  switchPage('guide', document.querySelector('nav a[data-page="guide"]'));
+  // 用 Leaflet 在地图上标记（如果地图已初始化）
+  setTimeout(function() {
+    initLeafletMap();
+    if (!leafletMap) return;
+    if (_locateMarker) leafletMap.removeLayer(_locateMarker);
+    var icon = L.divIcon({
+      html: '<div style="background:#e85d3a;color:#fff;width:28px;height:28px;border-radius:50%;text-align:center;line-height:28px;font-size:16px;box-shadow:0 2px 12px rgba(232,93,58,.5);border:2px solid #fff;animation:pulse 1.5s infinite">📍</div>',
+      className: '', iconSize: [28, 28], iconAnchor: [14, 14],
+    });
+    _locateMarker = L.marker([lat, lng], { icon: icon }).addTo(leafletMap);
+    _locateMarker.bindPopup('<b>' + landmark + '</b><br><span style="font-size:.8rem">' + msg + '</span>').openPopup();
+    leafletMap.setView([lat, lng], 16);
+  }, 500);
 }
 function quickAsk(text) { switchPage('guide', document.querySelector('nav a[data-page="guide"]')); document.getElementById('chatInput').value = text; sendText(); }
 
@@ -965,6 +1054,35 @@ function showPoiDetailAbout(name) {
   switchPage('poi-detail', null);
 }
 
+// ======== WEATHER ========
+var WEATHER_EMOJI = { '晴': '☀️', '少云': '🌤', '多云': '⛅', '阴': '☁️', '雨': '🌧', '雷': '⛈', '雪': '❄️', '雾': '🌫' };
+function weatherEmoji(condition) {
+  for (var k in WEATHER_EMOJI) { if (condition.indexOf(k) >= 0) return WEATHER_EMOJI[k]; }
+  return '⛅';
+}
+function fetchWeather() {
+  fetch('/api/weather').then(function(r) { return r.json(); }).then(function(w) {
+    var emoji = weatherEmoji(w.condition);
+    var info = '无锡 · ' + w.condition + '<br>温度 ' + w.temp + '°C（体感 ' + w.feels_like + '°C）';
+    if (w.alert && w.affected.length) {
+      info += '<br>⚠️ ' + w.alert;
+      // 显示预警横幅
+      var alertEl = document.getElementById('weatherAlert');
+      alertEl.style.display = 'block';
+      alertEl.innerHTML = '⚠️ ' + w.alert + ' — ' + w.affected.join('、') + ' 可能受影响。' + w.suggestion + '（点击切换至导览）';
+    } else {
+      document.getElementById('weatherAlert').style.display = 'none';
+    }
+    document.getElementById('weatherEmoji').textContent = emoji;
+    document.getElementById('weatherTemp').textContent = w.temp + '°';
+    document.getElementById('weatherInfo').innerHTML = info;
+  }).catch(function() {
+    // 离线兜底
+    document.getElementById('weatherTemp').textContent = '28°';
+    document.getElementById('weatherInfo').innerHTML = '无锡 · 多云转晴<br>体感舒适，适宜游玩';
+  });
+}
+
 // ======== INIT ========
 applyLang();
 renderPois();
@@ -972,7 +1090,10 @@ renderAbout();
 renderQuickGrid();
 genRoute(4, document.querySelector('.time-btn.active'));
 connectGuide();
+fetchWeather();
+setInterval(fetchWeather, 15 * 60 * 1000);  // 每 15 分钟刷新天气
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </body>
 </html>
