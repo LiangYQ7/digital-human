@@ -19,9 +19,9 @@ def overview(db: Session = Depends(get_db)):
     today = db.query(ChatLog).filter(ChatLog.created_at >= today0).all()
     week = db.query(ChatLog).filter(ChatLog.created_at >= week_ago).all()
 
-    # 热门问题（用户消息）
-    today_qs = [l.content for l in today if l.role == "user"]
-    hot = Counter(today_qs).most_common(5)
+    # 热门问题（本周，非仅今日）
+    week_qs = [l.content for l in week if l.role == "user"]
+    hot = Counter(week_qs).most_common(5)
 
     # 今日/本周服务人次（按独立会话数，不是消息数）
     today_sessions = len(set(l.session_id for l in today))

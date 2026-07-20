@@ -66,6 +66,7 @@ input[type=file]{width:auto}
 .avatar-loading{position:absolute;top:0;left:0;right:0;bottom:36px;background:rgba(0,0,0,.85);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:10;color:#fff;border-radius:10px 10px 0 0}
 .avatar-loading .sp{width:36px;height:36px;border:3px solid rgba(255,255,255,.2);border-top-color:#2d5a3f;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 .avatar-loading .lt{font-size:14px;margin:12px 0 8px;color:#ccc}
 .avatar-loading .lb{width:60%;max-width:200px;height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden}
 .avatar-loading .lf{height:100%;width:0%;background:#2d5a3f;border-radius:3px;transition:width .3s}
@@ -86,7 +87,7 @@ input[type=file]{width:auto}
   <div id="page-dashboard" class="page active">
     <div class="stats" id="stats"></div>
     <div class="row">
-      <div class="card"><h3>热门问答 TOP8</h3><div class="chart" id="chart-hot"></div></div>
+      <div class="card"><h3>热门问答 TOP5</h3><div class="chart" id="chart-hot"></div></div>
       <div class="card"><h3>服务人次趋势（近7天）</h3><div class="chart" id="chart-trend"></div></div>
     </div>
     <div class="row" style="margin-top:16px">
@@ -182,6 +183,20 @@ input[type=file]{width:auto}
       <div class="row" style="margin-top:16px"><div class="chart" id="chart-report-hourly"></div><div class="chart" id="chart-report-topic"></div></div>
     </div>
     <div class="card"><h3>智能运营建议</h3><div id="suggestions"></div></div>
+    <div class="card" style="border-left:3px solid #764ba2">
+      <h3>🤖 AI 运营洞察 <span style="font-weight:400;font-size:12px;color:#999;margin-left:8px">（临时生成，刷新后消失）</span></h3>
+      <button id="ai-summary-btn" class="btn btn-outline" onclick="loadAISummary()" style="border-color:#764ba2;color:#764ba2">✨ 生成 AI 总结</button>
+      <div id="ai-summary-box" style="display:none;margin-top:12px">
+        <div style="background:#f8f6fb;border-radius:10px;padding:16px;position:relative">
+          <div style="position:absolute;top:-10px;left:16px;background:#764ba2;color:#fff;font-size:10px;padding:2px 10px;border-radius:10px">AI 洞察</div>
+          <div id="ai-summary-text" style="font-size:13px;line-height:1.9;color:#333;min-height:40px;margin-top:4px"></div>
+          <div id="ai-summary-cursor" style="display:inline-block;width:2px;height:15px;background:#764ba2;animation:blink .8s infinite;vertical-align:middle"></div>
+        </div>
+      </div>
+      <div id="ai-summary-loading" style="display:none;margin-top:12px;text-align:center;color:#888;font-size:13px">
+        <span style="display:inline-block;animation:spin .8s linear infinite;margin-right:6px">⏳</span> AI 正在分析数据...
+      </div>
+    </div>
   </div>
 </main>
 <div class="toast" id="toast"></div>
@@ -311,6 +326,53 @@ async function loadReport(){
   document.getElementById('suggestions').innerHTML=(r.suggestions||[]).map(function(s,i){
     return '<div style="padding:10px 14px;margin-bottom:6px;border-radius:6px;background:'+(i===0?'#fff3e0':i===1?'#e8f5e9':'#e3f2fd')+';border-left:3px solid '+(i===0?'#ff9800':i===1?'#4caf50':'#2196f3')+';font-size:13px">💡 '+s+'</div>';
   }).join('')||'<span style="color:#888">暂无建议</span>';
+}
+
+// ======== AI 运营洞察（打字机效果） ========
+async function loadAISummary() {
+  var btn = document.getElementById('ai-summary-btn');
+  var box = document.getElementById('ai-summary-box');
+  var loading = document.getElementById('ai-summary-loading');
+  var textEl = document.getElementById('ai-summary-text');
+  var cursor = document.getElementById('ai-summary-cursor');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ 分析中...';
+  loading.style.display = 'block';
+  box.style.display = 'none';
+
+  try {
+    var days = document.getElementById('report-days').value;
+    var r = await (await fetch(ADMIN + '/api/report/ai-summary?days=' + days, { method: 'POST' })).json();
+    var text = r.summary || '';
+
+    loading.style.display = 'none';
+    box.style.display = 'block';
+    textEl.textContent = '';
+    cursor.style.display = 'inline-block';
+
+    // 打字机效果
+    var i = 0;
+    var speed = 40; // ms/字
+    function typeNext() {
+      if (i < text.length) {
+        textEl.textContent += text[i];
+        i++;
+        setTimeout(typeNext, speed);
+      } else {
+        cursor.style.display = 'none';
+        btn.textContent = '🔄 重新生成';
+      }
+    }
+    typeNext();
+  } catch (e) {
+    loading.style.display = 'none';
+    textEl.textContent = '生成失败，请稍后重试';
+    box.style.display = 'block';
+    cursor.style.display = 'none';
+    btn.textContent = '🔄 重试';
+  }
+  btn.disabled = false;
 }
 
 loadDashboard();

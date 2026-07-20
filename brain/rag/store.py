@@ -64,6 +64,15 @@ def get_collection() -> chromadb.Collection:
     return _COLLECTION
 
 
+def warmup():
+    """预加载 embedding 模型 + collection（消除首次 RAG 请求的冷启动 ~17s 延迟）。"""
+    import time
+    t0 = time.time()
+    print("[RAG] 预加载 BGE-M3 嵌入模型...", flush=True)
+    get_collection()
+    print(f"[RAG] 预加载完成 ({time.time() - t0:.1f}s)", flush=True)
+
+
 def reset_collection():
     """清空并重建 collection（用于重新入库）。"""
     global _COLLECTION

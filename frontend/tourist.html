@@ -129,7 +129,7 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
   </div>
 </nav>
 
-<div id="weatherAlert" style="display:none;background:linear-gradient(135deg,#e65100,#ff9800);color:#fff;text-align:center;padding:10px 16px;font-size:.85rem;cursor:pointer" onclick="switchPage('guide',document.querySelector('nav a[data-page=guide]'))"></div>
+<div id="weatherAlert" style="display:none;color:#fff;text-align:center;padding:10px 16px;font-size:.85rem;cursor:pointer" onclick="switchPage('guide',document.querySelector('nav a[data-page=guide]'))"></div>
 
 <section class="page active" id="page-home">
   <div class="hero">
@@ -1104,14 +1104,18 @@ function fetchWeather() {
   fetch('/api/weather').then(function(r) { return r.json(); }).then(function(w) {
     var emoji = weatherEmoji(w.condition);
     var info = '无锡 · ' + w.condition + '<br>温度 ' + w.temp + '°C（体感 ' + w.feels_like + '°C）';
-    if (w.alert && w.affected.length) {
+    var alertEl = document.getElementById('weatherAlert');
+    var hasAlert = w.alert && w.affected && w.affected.length;
+    if (hasAlert) {
       info += '<br>⚠️ ' + w.alert;
-      // 显示预警横幅
-      var alertEl = document.getElementById('weatherAlert');
       alertEl.style.display = 'block';
+      alertEl.style.background = 'linear-gradient(135deg,#e65100,#ff9800)';
       alertEl.innerHTML = '⚠️ ' + w.alert + ' — ' + w.affected.join('、') + ' 可能受影响。' + w.suggestion + '（点击切换至导览）';
     } else {
-      document.getElementById('weatherAlert').style.display = 'none';
+      // 天气良好也展示横幅，绿色友好风格
+      alertEl.style.display = 'block';
+      alertEl.style.background = 'linear-gradient(135deg,#2e7d32,#4caf50)';
+      alertEl.innerHTML = '☀️ 天气良好，适宜游览 — ' + (w.suggestion || '全天候适宜户外游览，祝您游玩愉快！') + '（点击切换至导览）';
     }
     document.getElementById('weatherEmoji').textContent = emoji;
     document.getElementById('weatherTemp').textContent = w.temp + '°';

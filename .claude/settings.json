@@ -12,7 +12,23 @@
       "Bash(git add *)",
       "Bash(git commit -m 'chore: 同步本地工作区改动 *)",
       "Bash(git pull *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git merge *)",
+      "Bash(git diff *)",
+      "Bash(git commit *)",
+      "Bash(git stash *)",
+      "Bash(git commit -m 'fix: 补充 feat/admin-enhance 的 dashboard/report 前端增强 *)",
+      "Bash(node -e \"try { eval\\(require\\('fs'\\).readFileSync\\('frontend/tourist.html','utf8'\\).match\\(/<script>\\([\\\\s\\\\S]*?\\)<\\\\/script>/\\)[1]\\); console.log\\('JS syntax OK'\\); } catch\\(e\\) { console.log\\('Syntax error:', e.message\\); }\")",
+      "Bash(git commit -m 'feat: 热词云图 + 中英文语言切换 *)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('brain/pipeline.py',encoding='utf-8'\\).read\\(\\)\\); print\\('pipeline.py OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('brain/server.py',encoding='utf-8'\\).read\\(\\)\\); print\\('server.py OK'\\)\")",
+      "Bash(git commit -m 'feat: 视觉定位 + 二维码签到 + 天气提醒 *)",
+      "Bash(git commit -m 'fix: 二维码改用URL编码 + 嵌入景点详情页 + 支持扫码跳转 *)",
+      "Bash(git commit -m 'fix: 修复三个bug — GPS地图标记 + POI列表QR码 + 关于页英文名 *)",
+      "Bash(ipconfig)",
+      "Bash(git commit -m 'fix: QR码默认使用局域网IP\\(192.168.5.171:8011\\)，手机可扫 *)",
+      "Bash(node -e ' *)",
+      "Bash(git commit -m 'fix: 定位模式改为选图即自动发送，无需手动按回车 *)"
     ]
   }
 }
