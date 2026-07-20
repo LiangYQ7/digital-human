@@ -1135,13 +1135,18 @@ fetchWeather();
 setInterval(fetchWeather, 15 * 60 * 1000);  // 每 15 分钟刷新天气
 
 // URL 参数处理：扫码后跳转 ?poi=p1 自动进入景点详情
+// ponytail: DOMContentLoaded 后再跳转，确保页面完全就绪
 (function() {
   var m = location.search.match(/[?&]poi=(p\d+)/);
-  if (m) {
-    var poi = POIS.find(function(p) { return p.id === m[1]; });
-    if (poi) { setTimeout(function() { showPoiDetail(poi.name); }, 500); }
-  }
+  if (m) { window._initPoiId = m[1]; }
 })();
+// 等 DOM 完全就绪后再跳转
+if (window._initPoiId) {
+  setTimeout(function() {
+    var poi = POIS.find(function(p) { return p.id === window._initPoiId; });
+    if (poi) { applyLang(); showPoiDetail(poi.name); }
+  }, 800);
+}
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
