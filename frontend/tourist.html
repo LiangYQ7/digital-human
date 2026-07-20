@@ -247,6 +247,10 @@ nav .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
         <h3 id="poi-detail-name" style="font-size:1.4rem;margin-bottom:6px"></h3>
         <div id="poi-detail-tags" style="margin-bottom:12px"></div>
         <p id="poi-detail-desc" style="color:#666;line-height:1.8;font-size:.92rem;margin-bottom:16px"></p>
+        <div id="poi-detail-qr" style="text-align:center;margin-bottom:16px">
+          <div id="poi-qr-code" style="display:inline-block;padding:6px;background:#fff;border:2px solid #e0d6bf;border-radius:8px"></div>
+          <div style="font-size:.7rem;color:#999;margin-top:4px">📱 扫码查看此景点</div>
+        </div>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
           <div class="stat"><div class="num" id="poi-detail-dwell"></div><div class="label">建议游览</div></div>
           <div class="stat"><div class="num" id="poi-detail-rank">#1</div><div class="label">推荐指数</div></div>
@@ -630,20 +634,24 @@ function tryDecodeQR(dataUrl) {
     var imageData = ctx.getImageData(0, 0, img.width, img.height);
     var code = jsQR(imageData.data, img.width, img.height);
     if (code && code.data) {
-      // 二维码格式：LINGSHAN:POI:p1 或直接用 poi_id
       var data = code.data;
-      var poiId = data;
-      if (data.indexOf('LINGSHAN:') === 0) {
-        // 支持 LINGSHAN:POI:p1 或 LINGSHAN:p1 格式
+      var poiId = null;
+      // 格式1: http://host/tourist?poi=p1 或 ?poi=p1
+      var m = data.match(/[?&]poi=(p\d+)/);
+      if (m) { poiId = m[1]; }
+      // 格式2: LINGSHAN:p1
+      if (!poiId && data.indexOf('LINGSHAN:') === 0) {
         poiId = data.replace('LINGSHAN:', '').replace('POI:', '');
       }
-      var poi = POIS.find(function(p) { return p.id === poiId; });
-      if (poi) {
-        showPoiDetail(poi.name);
-        toast('✅ ' + (LANG === 'zh' ? '已签到：' : 'Checked in: ') + poiName(poi), 1);
-      } else {
-        toast((LANG === 'zh' ? '二维码无法识别' : 'QR not recognized'), 0);
+      if (poiId) {
+        var poi = POIS.find(function(p) { return p.id === poiId; });
+        if (poi) {
+          showPoiDetail(poi.name);
+          toast('✅ ' + (LANG === 'zh' ? '已签到：' : 'Checked in: ') + poiName(poi), 1);
+          return;
+        }
       }
+      toast((LANG === 'zh' ? '二维码无法识别' : 'QR not recognized'), 0);
     } else {
       toast((LANG === 'zh' ? '未检测到二维码，请对准重试' : 'No QR detected, try again'), 0);
     }
@@ -850,8 +858,21 @@ function showPoiDetail(name) {
   document.getElementById('poi-detail-dwell').textContent = '~' + p.dwell + 'min';
   document.getElementById('poi-detail-tags').innerHTML = p.tags.map(function(t) { return '<span class="t">' + t + '</span>'; }).join('');
   document.getElementById('poi-detail-rank').textContent = p.must ? '#Must' : '#Recommended';
+  generatePoiQR(p.id);
   document.getElementById('poi-chat-msgs').innerHTML = '<div class="msg ai">👋 ' + t('poi_welcome').replace('{name}', displayName) + '</div>';
   switchPage('poi-detail', null);
+}
+
+// ======== POI QR 生成 ========
+function generatePoiQR(poiId) {
+  var qrContainer = document.getElementById('poi-qr-code');
+  qrContainer.innerHTML = '';
+  var url = window.location.origin + '/tourist?poi=' + poiId;
+  new QRCode(qrContainer, {
+    text: url, width: 120, height: 120,
+    colorDark: '#3a2f1f', colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
 }
 function poiQuickAsk(question) {
   if (!_curPoi) return;
@@ -1050,6 +1071,7 @@ function showPoiDetailAbout(name) {
   document.getElementById('poi-detail-dwell').textContent = '~'+(p.dwell||30)+'min';
   document.getElementById('poi-detail-tags').innerHTML = (p.tags||[]).map(function(t){return'<span class="t">'+t+'</span>';}).join('');
   document.getElementById('poi-detail-rank').textContent = p.must ? '#Must' : '#Recommended';
+  generatePoiQR(p.id);
   document.getElementById('poi-chat-msgs').innerHTML = '<div class="msg ai">👋 '+t('poi_welcome').replace('{name}', displayName)+'</div>';
   switchPage('poi-detail', null);
 }
@@ -1092,8 +1114,18 @@ genRoute(4, document.querySelector('.time-btn.active'));
 connectGuide();
 fetchWeather();
 setInterval(fetchWeather, 15 * 60 * 1000);  // 每 15 分钟刷新天气
+
+// URL 参数处理：扫码后跳转 ?poi=p1 自动进入景点详情
+(function() {
+  var m = location.search.match(/[?&]poi=(p\d+)/);
+  if (m) {
+    var poi = POIS.find(function(p) { return p.id === m[1]; });
+    if (poi) { setTimeout(function() { showPoiDetail(poi.name); }, 500); }
+  }
+})();
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </body>
 </html>
