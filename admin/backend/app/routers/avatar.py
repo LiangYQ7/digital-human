@@ -121,7 +121,7 @@ def list_disk_avatars():
 
 @router.post("/switch-avatar")
 def switch_avatar(avatar_id: str = Query(...)):
-    """切换当前激活形象的 avatar_id。"""
+    """切换当前激活形象的 avatar_id。自动清空 LiveTalking 旧会话。"""
     config_path = (
         Path(__file__).parent.parent.parent.parent.parent
         / "brain" / "config" / "active_avatar.json"
@@ -136,6 +136,14 @@ def switch_avatar(avatar_id: str = Query(...)):
         config_path.write_text(
             json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8"
         )
+
+        # 清空 LiveTalking 所有旧会话，避免槽位占满导致用户端连不上
+        try:
+            import requests as _r
+            _r.post("http://127.0.0.1:8010/api/admin/reset-sessions", timeout=5)
+        except Exception:
+            pass
+
         return {"avatar_id": avatar_id, "synced": True}
     except Exception as e:
         return {"error": str(e), "synced": False}
